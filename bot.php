@@ -97,7 +97,7 @@ while(1){
 			if(!$socket || $errno<>0){ sleep(15); continue; }
 			stream_set_timeout($socket,$stream_timeout);
 			$connect_time=time();
-			if(!empty($disable_sasl)){
+			if(empty($disable_sasl)){
 				send("CAP LS\n");
 				while($data=fgets($socket)){
 					echo $data;
