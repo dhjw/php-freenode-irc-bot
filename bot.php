@@ -116,6 +116,7 @@ while(1){
 			if(!empty($user) && !empty($pass) && !empty($disable_sasl)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
 			send("CAP REQ account-notify\n");
 			send("CAP REQ extended-join\n");
+			if(empty($botmask)) send("WHOIS $nick\n"); // non-sasl botmask detection
 			sleep(1);
 			send("JOIN $channel\n");
 			$connect=false;
@@ -186,6 +187,14 @@ while(1){
 			if(preg_match("/$ign/",$incnick)){ echo "ignoring $incnick\n"; continue(2); }
 		}
 
+		// get botmask from WHOIS on connect
+		if($ex[1] == '311'){
+			if($ex[2]==$nick){
+				$botmask=$ex[5];
+				echo "botmask=$botmask\n";
+			}
+		}
+		
 		if($ex[1] == '451'){
 			echo "* Not registered (Nick in use on connect, getting a new one..)\n";
 			shuffle($altchars);
