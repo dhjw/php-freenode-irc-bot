@@ -103,6 +103,7 @@ while(1){
 			stream_set_timeout($socket,$stream_timeout);
 			$connect_time=time();
 			if(empty($disable_sasl)){
+				echo "Authenticating with SASL\n";
 				send("CAP LS\n");
 				while($data=fgets($socket)){
 					echo $data;
@@ -127,7 +128,11 @@ while(1){
 				if($ex[1]=='376'){ echo "end of MOTD\n"; break; }
 				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 			}
-			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
+			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)){
+				echo "Authenticating with Nickserv\n";
+				send("PRIVMSG NickServ :IDENTIFY $user $pass\n");
+				sleep(2);
+			}
 			if(empty($botmask)) send("WHOIS $nick\n"); // non-sasl botmask detection
 			sleep(1);
 			send("JOIN $channel\n");

@@ -64,6 +64,7 @@ $flood_max_dupe_time=600;
 
 // more options
 $disable_sasl=false;
+$disable_nickserv=false; // note: nickserv not used if sasl enabled
 $disable_help=false;
 $disable_triggers=false;
 $disable_titles=false;
