@@ -38,7 +38,8 @@ if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr
 if(!empty($bible_key)) $helptxt.=" !kj or !kjv <verses> - retrieve bible verses\n";
 $helptxt.=" !flip - flip a coin (call heads or tails first!)
  !8 or !8ball - magic 8-ball\n";
-if(file_exists('/usr/games/fortune')) $helptxt.=" !f or !fortune - fortune\n\n";
+if(file_exists('/usr/games/fortune')) $helptxt.=" !f or !fortune - fortune\n";
+$helptxt.=" !insult [target] - Deliver a Shakespearian insult to the channel with an optional target\n\n";
 $helptxt.="admin commands:
  !s or !say <text> - output text to channel
  !e or !emote <text> - emote text to channel
