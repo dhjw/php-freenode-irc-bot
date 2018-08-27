@@ -12,10 +12,10 @@ A simple but powerful FreeNode IRC bot written in PHP
 - Run the bot with `php bot.php <instance>` or `php bot.php <instance> test` for test mode. On Linux it is recommended to run the bot in `screen` so closing the terminal won't kill the bot
 
 ## Setting up Services
-### YouTube search via !yt
+### YouTube URL info and search via !yt
 - Create a project at [console.cloud.google.com](https://console.cloud.google.com/)
 - Under APIs and Services enable [YouTube Data API v3](https://developers.google.com/youtube/v3/)
 - "Where will you be calling the API from?" CLI Tool
 - Under Credentials create an API key
-- Put the key in the bot settings file in the `$youtube_api_key` variable
+- Add the API key to the `$youtube_api_key` variable in `settings-<instance>.php`
 - Usage is free for hundreds of thousands of queries per day
