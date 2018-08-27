@@ -75,7 +75,11 @@ if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
 if(isset($connect_ip) && strpos($connect_ip,':')!==false) $connect_ip="[$connect_ip]"; // add brackets to ipv6
 if(isset($curl_iface) && strpos($curl_iface,':')!==false) $curl_iface="[$curl_iface]";
-if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty($pass))){ $disable_sasl=true; $disable_nickserv=true; }
+if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty($pass))){
+	echo "NOTICE: Username and password not set. Disabling SASL and Nickserv authentication.\n";
+	$disable_sasl=true;
+	$disable_nickserv=true;
+}
 $orignick=$nick;
 $lastnick='';
 $last_nick_change=0;
@@ -108,15 +112,22 @@ while(1){
 					if(strpos($data,'AUTHENTICATE +')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
 					if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
 					if(strpos($data,'SASL authentication successful')!==false){ send("CAP END\n"); break; }
-					if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
+					if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR authenticating with SASL, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 				}
 			}
 			send("USER $ident $user $user :{$ircname}\n"); // first $user can be changed to modify ident and account login still works
 			if(!empty($pass)) send("PASS $pass\n");
 			send("NICK $nick\n");
-			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
 			send("CAP REQ account-notify\n");
 			send("CAP REQ extended-join\n");
+			// wait til end of motd
+			while($data=fgets($socket)){
+				echo $data;
+				$ex=explode(' ',trim($data));
+				if($ex[1]=='376'){ echo "end of MOTD\n"; break; }
+				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
+			}
+			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
 			if(empty($botmask)) send("WHOIS $nick\n"); // non-sasl botmask detection
 			sleep(1);
 			send("JOIN $channel\n");
