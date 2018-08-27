@@ -7,7 +7,7 @@ $channel = '##examplechan';
 $nick = 'somebot'; // default nick
 $test_channel = '##exampletest'; // run script as "php bot.php <instance> test" for test mode
 $test_nick = 'somebot[beta]';
-$user = 'your_username'; // FreeNode account - required, for SASL
+$user = 'your_username'; // Freenode account - required, for SASL
 $pass = 'your_password';
 $ident = 'bot'; // ident@...
 $ircname = 'a happy little bot by '.$admins[0]; // "real name" in /whois
@@ -63,6 +63,7 @@ $flood_max_dupe_lines=3;
 $flood_max_dupe_time=600;
 
 // more options
+$disable_sasl=false;
 $disable_help=false;
 $disable_triggers=false;
 $disable_titles=false;

@@ -1,6 +1,6 @@
 #!/usr/bin/php
 <?php
-// PHP FreeNode IRC bot by dw1
+// PHP Freenode IRC bot by dw1
 chdir(dirname(__FILE__));
 set_time_limit(0);
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
@@ -97,21 +97,23 @@ while(1){
 			if(!$socket || $errno<>0){ sleep(15); continue; }
 			stream_set_timeout($socket,$stream_timeout);
 			$connect_time=time();
-			send("CAP LS\n");
-			while($data=fgets($socket)){
-				echo $data;
-				$ex=explode(' ',trim($data));
-				if(strpos($data,'CAP * LS')!==false && strpos($data,'sasl')!==false) send("CAP REQ :multi-prefix sasl\n");
-				if(strpos($data,'CAP * ACK')!==false) send("AUTHENTICATE PLAIN\n");
-				if(strpos($data,'AUTHENTICATE +')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
-				if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
-				if(strpos($data,'SASL authentication successful')!==false){ send("CAP END\n"); break; }
-				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
+			if(!empty($disable_sasl)){
+				send("CAP LS\n");
+				while($data=fgets($socket)){
+					echo $data;
+					$ex=explode(' ',trim($data));
+					if(strpos($data,'CAP * LS')!==false && strpos($data,'sasl')!==false) send("CAP REQ :multi-prefix sasl\n");
+					if(strpos($data,'CAP * ACK')!==false) send("AUTHENTICATE PLAIN\n");
+					if(strpos($data,'AUTHENTICATE +')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
+					if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
+					if(strpos($data,'SASL authentication successful')!==false){ send("CAP END\n"); break; }
+					if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
+				}
 			}
 			send("USER $ident $user $user :{$ircname}\n"); // first $user can be changed to modify ident and account login still works
 			if(!empty($pass)) send("PASS $pass\n");
 			send("NICK $nick\n");
-			// if(!empty($user) && !empty($pass)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
+			if(!empty($user) && !empty($pass) && !empty($disable_sasl)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
 			send("CAP REQ account-notify\n");
 			send("CAP REQ extended-join\n");
 			sleep(1);
