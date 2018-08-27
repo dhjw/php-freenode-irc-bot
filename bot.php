@@ -34,7 +34,7 @@ if(!empty($omdb_key)) $helptxt.=" !m <query or IMDb id e.g. tt123456> - search O
 if(!empty($currencylayer_key)) $helptxt.=" !cc <amount> <from_currency> <to_currency> - currency converter\n";
 if(!empty($wolfram_appid)) $helptxt.=" !wa - query wolfram alpha\n";
 if(!empty($geo_key)) $helptxt.=" !geo <host or IP> - get geolocation of host or IP\n";
-if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages\n";
+if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages. see http://bit.ly/iso639-1\n";
 if(!empty($bible_key)) $helptxt.=" !kj or !kjv <verses> - retrieve bible verses\n";
 $helptxt.=" !flip - flip a coin (call heads or tails first!)
  !8 or !8ball - magic 8-ball\n";
