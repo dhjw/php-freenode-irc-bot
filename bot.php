@@ -75,6 +75,7 @@ if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
 if(isset($connect_ip) && strpos($connect_ip,':')!==false) $connect_ip="[$connect_ip]"; // add brackets to ipv6
 if(isset($curl_iface) && strpos($curl_iface,':')!==false) $curl_iface="[$curl_iface]";
+if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty($pass))){ $disable_sasl=true; $disable_nickserv=true; }
 $orignick=$nick;
 $lastnick='';
 $last_nick_change=0;
@@ -113,7 +114,7 @@ while(1){
 			send("USER $ident $user $user :{$ircname}\n"); // first $user can be changed to modify ident and account login still works
 			if(!empty($pass)) send("PASS $pass\n");
 			send("NICK $nick\n");
-			if(!empty($user) && !empty($pass) && !empty($disable_sasl)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
+			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)) send("PRIVMSG NickServ :IDENTIFY $user $pass\n"); // redundant since SASL
 			send("CAP REQ account-notify\n");
 			send("CAP REQ extended-join\n");
 			if(empty($botmask)) send("WHOIS $nick\n"); // non-sasl botmask detection
