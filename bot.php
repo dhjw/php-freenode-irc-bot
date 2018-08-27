@@ -58,6 +58,7 @@ $helptxt.="admin commands:
 note: commands may be used in channel or pm. separate multiple hostmasks with spaces. bans, quiets, invites occur in $channel.";
 file_put_contents("./help-$nick",$helptxt);
 $help_url=trim(shell_exec("pastebinit ./help-$nick"));
+unlink("./help-$nick");
 if(strpos($help_url,'/p/')===false){
         echo "ERROR: Failed to paste help file! Is pastebinit installed? Help file disabled.\n";
         $help_url='';
