@@ -3,7 +3,7 @@ A simple but powerful FreeNode IRC bot written in PHP
 
 ### How to use
 - Install php with cURL support, e.g. on ubuntu `sudo apt install php7.2 php7.2-curl`
-- Clone this repository. `git clone https://github.com/dhjw/ircbot` or just download bot.php and settings-example.php
+- Clone this repository. `git clone https://github.com/dhjw/php-freenode-irc-bot` or just download bot.php and settings-example.php
 - Copy `settings-example.php` to `settings-<instance>.php`
 - Create a FreeNode account for the bot to authenticate with SASL (required). See `/msg nickserv help register`
 - Install pastebinit (recommended) `sudo apt install pastebinit`
