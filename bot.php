@@ -57,17 +57,44 @@ $helptxt.="admin commands:
  !restart - reload the bot
  !die - kill the bot
 note: commands may be used in channel or pm. separate multiple hostmasks with spaces. bans, quiets, invites occur in $channel.";
-file_put_contents("./help-$nick",$helptxt);
-$help_url=trim(shell_exec("pastebinit ./help-$nick"));
-unlink("./help-$nick");
-if(strpos($help_url,'/p/')===false){
-        echo "ERROR: Failed to paste help file! Is pastebinit installed? Help file disabled.\n";
-        $help_url='';
+
+// update help paste only if changed
+$help_changed=true;
+if(isset($botdata->help_url)){
+	echo "Checking if help text changed.. ";
+	$html=file_get_contents($botdata->help_url);
+	$pos=strrpos($html,'<pre>');
+	if($pos!==false){
+		$html=substr($html,$pos+5);
+		$html=substr($html,0,strrpos($html,'</pre>'));
+		$html=trim(htmlspecialchars_decode($html,ENT_QUOTES));
+		if($helptxt<>$html){
+			echo "yes, creating new paste\n";
+			$help_changed=true;
+		} else {
+			$help_changed=false;
+			$help_url=$botdata->help_url_short;
+			echo "no, help_url=$help_url\n";
+		}
+	}
 }
-echo "help url=$help_url\n";
-if(!empty($help_url)){
-	$help_url=make_bitly_url($help_url);
-	echo "short help url=$help_url\n";
+
+if(!isset($botdata->help_url) || $help_changed){
+	file_put_contents("./help-$nick",$helptxt);
+	$help_url=trim(shell_exec("pastebinit ./help-$nick"));
+	unlink("./help-$nick");
+	if(strpos($help_url,'/p/')===false){
+	        echo "ERROR: Failed to paste help file! Is pastebinit installed? Help file disabled.\n";
+	        $help_url='';
+	}
+	echo "help url=$help_url\n";
+	if(!empty($help_url)){
+		$botdata->help_url=$help_url;
+		$help_url=make_bitly_url($help_url);
+		echo "short help url=$help_url\n";
+		$botdata->help_url_short=$help_url;
+		file_put_contents($datafile, json_encode($botdata));
+	}
 }
 
 // main loop
