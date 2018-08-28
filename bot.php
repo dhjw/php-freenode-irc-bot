@@ -19,7 +19,7 @@ if(!empty($argv[2])){
 
 // load data
 $botdata=json_decode(file_get_contents($datafile));
-print_r($botdata);
+if(isset($botdata->nick)) $nick=$botdata->nick;
 
 $helptxt = "*** $nick $channel !help ***\n\nglobal commands:\n";
 if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $helptxt.=" {$v[0]} - {$v[3]}\n";
@@ -105,7 +105,6 @@ if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty(
 }
 if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
-if(isset($botdata->nick)) $nick=$botdata->nick;
 $orignick=$nick;
 $lastnick='';
 $last_nick_change=0;
