@@ -20,8 +20,6 @@ if(!empty($argv[2])){
 // load data
 $botdata=json_decode(file_get_contents($datafile));
 print_r($botdata);
-// preserve custom nick across restarts
-if(isset($botdata->nick)) $nick=$botdata->nick;
 
 $helptxt = "*** $nick $channel !help ***\n\nglobal commands:\n";
 if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $helptxt.=" {$v[0]} - {$v[3]}\n";
@@ -98,8 +96,6 @@ if(!isset($botdata->help_url) || $help_changed){
 }
 
 // main loop
-if(empty($ircname)) $ircname=$user;
-if(empty($ident)) $ident='bot';
 if(isset($connect_ip) && strpos($connect_ip,':')!==false) $connect_ip="[$connect_ip]"; // add brackets to ipv6
 if(isset($curl_iface) && strpos($curl_iface,':')!==false) $curl_iface="[$curl_iface]";
 if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty($pass))){
@@ -107,6 +103,9 @@ if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty(
 	$disable_sasl=true;
 	$disable_nickserv=true;
 }
+if(empty($ircname)) $ircname=$user;
+if(empty($ident)) $ident='bot';
+if(isset($botdata->nick)) $nick=$botdata->nick;
 $orignick=$nick;
 $lastnick='';
 $last_nick_change=0;
