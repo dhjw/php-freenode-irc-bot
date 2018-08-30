@@ -546,27 +546,14 @@ while(1){
 					$noextract=false;
 					$nooutput=false;
 					echo "wikipedia connect.. url=$u.. ";
-					$ch = curl_init($u);
-					// force ipv4 to avoid some weird dns error
-					curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-					curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-					curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-					if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-					curl_setopt($ch, CURLOPT_LOCALPORT, rand(10000,20000));
-					curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-					curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-					curl_setopt($ch, CURLOPT_VERBOSE, 1);
-					curl_setopt($ch, CURLOPT_HEADER, 1);
-					curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-					curl_setopt($ch, CURLOPT_MAXREDIRS, 9);
-					$response = curl_exec($ch);
+					$response=curlget([CURLOPT_URL=>$u]);
 					if(empty($response)){
 						echo "no response/connect failed, retrying\n";
 						sleep(1);
 						$nooutput=true;
 						continue;
 					}
-					echo "CURLINFO:".print_r(curl_getinfo($ch),true)."\n";
+					// echo "CURLINFO:".print_r(curl_getinfo($ch),true)."\n";
 					$url = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
 
 					if(strstr($response,'wgInternalRedirectTargetUrl')!==false){
@@ -577,15 +564,14 @@ while(1){
 						if(!empty($tmp)) $url="https://en.wikipedia.org$tmp";
 					}
 
-					list($header, $body) = explode("\r\n\r\n", $response, 2);
 					$noextract=false;
 					$nooutput=false;
-					if(strpos($body,'mw-search-nonefound')!==false || strpos($body,'mw-search-createlink')!==false){
+					if(strpos($response,'mw-search-nonefound')!==false || strpos($response,'mw-search-createlink')!==false){
 						send("PRIVMSG $privto :There were no results matching the query.\n");
 						$noextract=true;
 						$nooutput=true;
 						break;
-					} elseif(strpos($body,'disambigbox')!==false){
+					} elseif(strpos($response,'disambigbox')!==false){
 						if(strpos($url,'disambiguation')===false) $url.=' (disambiguation)';
 						//send("PRIVMSG $privto :$url\n");
 						$noextract=true;
@@ -673,18 +659,10 @@ while(1){
 			} elseif($trigger == '!kjv' || $trigger == '!kj'){
 				echo "!kjv called\n";
 				$args=str_replace('–','-',$args);
-				$ch=curl_init();
-				curl_setopt($ch, CURLOPT_URL, "https://bibles.org/v2/search.js?query=".urlencode($args)."&version=eng-KJV");
-				curl_setopt($ch, CURLOPT_USERPWD, "$bible_key:X");
-				if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-				curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-				curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-				curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-				$tmp=curl_exec($ch);
+				$tmp=curlget([
+					CURLOPT_URL=>"https://bibles.org/v2/search.js?query=".urlencode($args)."&version=eng-KJV",
+					CURLOPT_USERPWD=>"$bible_key:X"
+				]);
 				print_r($tmp);
 				$tmp=json_decode($tmp);
 				print_r($tmp);
@@ -711,21 +689,11 @@ while(1){
 					$cmd="http://www.omdbapi.com/?i=".urlencode($tmp)."&apikey={$omdb_key}";
 					echo "cmd=$cmd\n";
 					for($i=$num_file_get_retries;$i>0;$i--){
-						$ch=curl_init();
-						curl_setopt($ch, CURLOPT_URL, $cmd);
-						if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-						curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-						curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-						curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-						$tmp=curl_exec($ch);
-						$tmpx=curl_getinfo($ch);
-						print_r($tmpx);
-						curl_close($ch);
+						$tmp=curlget([CURLOPT_URL=>$cmd]);
 						$tmp=json_decode($tmp);
 						print_r($tmp);
 						if(!empty($tmp)) break; else if($i>1) sleep(1);
 					}
-					if($tmpx['http_code']==403){ send("PRIVMSG $privto :OMDB API error (403)\n"); continue; }
 					if(empty($tmp)){ send("PRIVMSG $privto :OMDB API error.\n"); continue; }
 					if($tmp->Type=='movie') $tmp3=''; else $tmp3=" {$tmp->Type}";
 					if($tmp->Response=='True') send("PRIVMSG $privto :\xe2\x96\xb6 {$tmp->Title} ({$tmp->Year}$tmp3) | {$tmp->Genre} | {$tmp->Actors} | \"{$tmp->Plot}\" http://www.imdb.com/title/{$tmp->imdbID}/ [{$tmp->imdbRating}]\n"); elseif($tmp->Response=='False') send("PRIVMSG $privto :{$tmp->Error}\n"); else send("PRIVMSG $privto :OMDB API error.\n");
@@ -748,20 +716,9 @@ while(1){
 						$cmd="http://www.omdbapi.com/?apikey={$omdb_key}&type=$t$tmp2&t=".urlencode($args);
 						echo "cmd=$cmd\n";
 						for($i=$num_file_get_retries;$i>0;$i--){
-							$ch=curl_init();
-							curl_setopt($ch, CURLOPT_URL, $cmd);
-							if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-							curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-							curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-							curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-							curl_setopt($ch, CURLINFO_HEADER_OUT, 1);
-							$tmp=curl_exec($ch);
-							$tmpx=curl_getinfo($ch);
-							print_r($tmpx);
-							curl_close($ch);
+							$tmp=curlget([CURLOPT_URL=>$cmd]);
 							$tmp=json_decode($tmp);
 							print_r($tmp);
-							if($tmpx['http_code']==403){ send("PRIVMSG $privto :OMDB API error (403)\n"); continue(4); }
 							if(!empty($tmp)) break; else if($i>1) sleep(1);
 						}
 						if(empty($tmp)){ send("PRIVMSG $privto :OMDB API error ($k)\n"); continue; }
@@ -792,18 +749,16 @@ while(1){
 					$target='en';
 				}
 				$tmp=json_encode(['q'=>$args,'source'=>$source,'target'=>$target]);
-				$ch = curl_init('https://translation.googleapis.com/language/translate/v2');
-				if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-				curl_setopt($ch, CURLOPT_POSTFIELDS, $tmp);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-				curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-					'Content-Type: application/json',
-					'Authorization: Bearer '.$tmp2
-				));
-				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-				curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-				$tmp=json_decode(curl_exec($ch));
+				$tmp=curlget([
+					CURLOPT_URL=>'https://translation.googleapis.com/language/translate/v2',
+					CURLOPT_CUSTOMREQUEST=>'POST',
+					CURLOPT_POSTFIELDS=>$tmp,
+					CURLOPT_HTTPHEADER=>[
+						'Content-Type: application/json',
+						'Authorization: Bearer '.$tmp2
+					]
+				]);
+				$tmp=json_decode($tmp);
 				print_r($tmp);
 				if(isset($tmp->data->translations[0])){
 					if(isset($tmp->data->translations[0]->detectedSourceLanguage)) $lang=get_lang($tmp->data->translations[0]->detectedSourceLanguage);
@@ -913,20 +868,12 @@ while(1){
 						echo "getting from imgur api..\n";
 						$tmp=substr($purl['path'],1);
 						$tmp=substr($tmp,0,strrpos($tmp,'.'));
-						$ch=curl_init();
-						curl_setopt_array($ch, array(
-							CURLOPT_RETURNTRANSFER => 1,
+						$tmp=curlget([
 							CURLOPT_URL => "https://api.imgur.com/3/image/$tmp",
 							CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
-						));
-						if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-						curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-						curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-						$tmp=json_decode(curl_exec($ch));
-						echo "curl handle=".print_r($tmp,true)."\n";
-						$info=curl_getinfo($ch);
-						echo "curl_getinfo="; print_r($info);
-						curl_close($ch);
+						]);
+						$tmp=json_decode($tmp);
+						echo "response=".print_r($tmp,true)."\n";
 						$out='';
 						if($tmp->success==1){
 							if(!empty($tmp->data->nsfw)) $out.='NSFW';
@@ -1029,34 +976,12 @@ while(1){
 							continue;
 						}
 					}
-
-					$ch = curl_init($u);
-					curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-					curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-					curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-					if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-					curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-					curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookiefile.txt');
-					curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-					curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-					curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
-					curl_setopt($ch, CURLOPT_ENCODING , ""); // avoid gzipped result per http://stackoverflow.com/a/28295417
-					curl_setopt($ch, CURLOPT_HTTPHEADER, [ // seem to help some servers
-						'Connection: keep-alive',
-						'Upgrade-Insecure-Requests: 1',
-						'Accept-Language: en'
-					]);
-					$str = curl_exec($ch);
-					echo "curl handle=".print_r(substr($str,0,2000),true)."\n";
-					file_put_contents('tmp',$str);
-
-					$info=curl_getinfo($ch);
-					echo "curl_getinfo="; print_r($info);
-					# echo substr($str,0,4096)."...\n";
-					if(empty($str)) continue;
+					$html=curlget([CURLOPT_URL=>$u]);
+					echo "response[2048]=".print_r(substr($html,0,2048),true)."\n";
+					if(empty($html)){ echo "Error: response blank\n"; continue; }
 					$title='';
 					$dom = new DOMDocument();
-					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $str)){
+					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
 						$list = $dom->getElementsByTagName("title");
 						if ($list->length > 0) $title = $list->item(0)->textContent;
 					}
@@ -1143,6 +1068,39 @@ while(1){
 	}
 }
 // End Loop
+
+function curlget($opts=[]){
+	global $ch,$custom_curl_iface,$curl_iface,$user_agent;
+	$ch=curl_init();
+	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+	if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
+	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+	curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookiefile.txt');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+//	curl_setopt($ch, CURLOPT_VERBOSE, 1);
+//	curl_setopt($ch, CURLOPT_HEADER, 1);
+	curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
+	curl_setopt($ch, CURLOPT_ENCODING , ""); // avoid gzipped result per http://stackoverflow.com/a/28295417
+	curl_setopt($ch, CURLOPT_HTTPHEADER, [ // seem to help some servers
+		'Connection: keep-alive',
+		'Upgrade-Insecure-Requests: 1',
+		'Accept-Language: en'
+	]);
+	// break big connections per https://stackoverflow.com/a/17642638
+	curl_setopt($ch, CURLOPT_BUFFERSIZE, 128);
+	curl_setopt($ch, CURLOPT_NOPROGRESS, false);
+	curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, function($dls,$d,$uls,$u){
+		if($d>(5*1024*1024)){
+			echo "aborting download at 5MB\n";
+			return 1;
+		} else return 0;
+	});
+	curl_setopt_array($ch,$opts);
+	return curl_exec($ch);
+}
 
 function isadmin(){
 	global $admins,$ex,$users;
@@ -1423,22 +1381,11 @@ function get_wiki_extract($q,$len=280){
 	$url="https://en.wikipedia.org/w/api.php?action=query&titles=".urlencode($q)."&prop=extracts&format=json&redirects";
 	while(1){
 		echo "wikipedia connect.. url=$url.. ";
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-		if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-		curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_VERBOSE, 1);
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-		curl_setopt($ch, CURLOPT_MAXREDIRS, 9);
-		$tmp = curl_exec($ch);
+		$tmp=curlget([CURLOPT_URL=>$url]);
 		if(empty($tmp)){
 			echo "no response/connect failed, retrying\n";
 			continue;
 		}
-		echo "CURLINFO:".print_r(curl_getinfo($ch),true)."\n";
 		break;
 	}
 	echo "tmp=$tmp\n";
@@ -1480,23 +1427,8 @@ function get_true_random($min = 1, $max = 100) {
 	global $custom_curl_iface,$curl_iface;
 	$max = ((int) $max >= 1) ? (int) $max : 100;
 	$min = ((int) $min < $max) ? (int) $min : 1;
-	$options = array(
-		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_HEADER => false,
-		CURLOPT_FOLLOWLOCATION => true,
-		CURLOPT_ENCODING => '',
-		CURLOPT_USERAGENT => 'PHP',
-		CURLOPT_AUTOREFERER => true,
-		CURLOPT_CONNECTTIMEOUT => 15,
-		CURLOPT_TIMEOUT => 15,
-		CURLOPT_MAXREDIRS => 10,
-	);
-	$ch = curl_init('http://www.random.org/integers/?num=1&min='. $min . '&max=' . $max . '&col=1&base=10&format=plain&rnd=new');
-	curl_setopt_array($ch, $options);
-	if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-	$content = curl_exec($ch);
-	curl_close($ch);
-	return trim($content);
+	$r=curlget([CURLOPT_URL=>'http://www.random.org/integers/?num=1&min='. $min . '&max=' . $max . '&col=1&base=10&format=plain&rnd=new']);
+	return trim($r);
 }
 
 // ISO 639-1 Language Codes
