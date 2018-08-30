@@ -977,7 +977,7 @@ while(1){
 						}
 					}
 					$html=curlget([CURLOPT_URL=>$u]);
-					echo "response[2048]=".print_r(substr($html,0,2048),true)."\n";
+					echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 					if(empty($html)){ echo "Error: response blank\n"; continue; }
 					$title='';
 					$dom = new DOMDocument();
@@ -1070,7 +1070,8 @@ while(1){
 // End Loop
 
 function curlget($opts=[]){
-	global $ch,$custom_curl_iface,$curl_iface,$user_agent;
+	global $ch,$custom_curl_iface,$curl_iface,$user_agent,$curl_response;
+	$curl_response='';
 	$ch=curl_init();
 	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
@@ -1089,17 +1090,18 @@ function curlget($opts=[]){
 		'Upgrade-Insecure-Requests: 1',
 		'Accept-Language: en'
 	]);
-	// break big connections per https://stackoverflow.com/a/17642638
-	curl_setopt($ch, CURLOPT_BUFFERSIZE, 128);
-	curl_setopt($ch, CURLOPT_NOPROGRESS, false);
-	curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, function($dls,$d,$uls,$u){
-		if($d>(5*1024*1024)){
-			echo "aborting download at 5MB\n";
-			return 1;
-		} else return 0;
+	// partially read big connections per https://stackoverflow.com/a/17641159
+	curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($handle,$data){
+		global $curl_response;
+		$curl_response.=$data;
+		if(strlen($curl_response)>(250*1024)){
+			echo "aborting download at 250KB\n";
+			return 0;
+		} else return strlen($data);
 	});
 	curl_setopt_array($ch,$opts);
-	return curl_exec($ch);
+	curl_exec($ch);
+	return $curl_response;
 }
 
 function isadmin(){
