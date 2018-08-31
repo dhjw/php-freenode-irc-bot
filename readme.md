@@ -1,5 +1,5 @@
 ## PHP Freenode IRC Bot
-A simple but powerful FreeNode IRC bot written in PHP
+A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 
 ### How to use
 - Install php with cURL support, e.g. on ubuntu `sudo apt install php7.2 php7.2-curl`
@@ -42,4 +42,8 @@ function example_words(){
 	$words=['quick','brown','fox','jumps','over','lazy','dog'];
 	$out=$words[rand(0,count($words)-1)];
 	send("PRIVMSG $target :$out\n");
-}```
+}
+```
+
+## Contact
+Hit up `dw1` on Freenode with any questions or bugs.
