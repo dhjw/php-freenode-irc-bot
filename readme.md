@@ -19,3 +19,27 @@ A simple but powerful FreeNode IRC bot written in PHP
 - Under Credentials create an API key
 - Add the API key to the `$youtube_api_key` variable in `settings-<instance>.php`
 - Usage is free for hundreds of thousands of queries per day
+
+## Custom Triggers
+You can set up custom triggers in settings-<instance>.php files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
+
+Examples of custom triggers are as follows:
+```
+// custom triggers (trigger in channel or pm will cause specific string to be output to channel or pm or a custom function to execute)
+// array of arrays [ trigger, string to output (or function:name), respond via PM true or false (default true. if false always posts to channel), help text ]
+// with custom function
+// - $args holds all arguments sent with the trigger in a trimmed string
+// - with PM true $target global holds the target whether channel or user, respond with e.g. send("PRIVMSG $target :<text>\n");
+// - with PM false send to $channel global instead
+$custom_triggers=[
+	['!rules-example','Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'],
+	['!func-example','function:example_words', true, '!func-example - Output a random word']
+];
+
+function example_words(){
+	global $target,$args;
+	echo "!func-example / example_words() called by $target. args=$args\n";
+	$words=['quick','brown','fox','jumps','over','lazy','dog'];
+	$out=$words[rand(0,count($words)-1)];
+	send("PRIVMSG $target :$out\n");
+}```
