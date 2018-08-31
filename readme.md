@@ -21,7 +21,7 @@ A simple but powerful FreeNode IRC bot written in PHP
 - Usage is free for hundreds of thousands of queries per day
 
 ## Custom Triggers
-You can set up custom triggers in settings-<instance>.php files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
+You can set up custom triggers in `settings-<instance>.php` files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
 
 Examples of custom triggers are as follows:
 ```
