@@ -2,14 +2,15 @@
 A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 
 ### How to use
-- Install php with cURL support, e.g. on ubuntu `sudo apt install php7.2 php7.2-curl`
+- Install php with cURL and pcntl support, e.g. on ubuntu `sudo apt install php7.2 php7.2-curl`
 - Clone this repository. `git clone https://github.com/dhjw/php-freenode-irc-bot` or just download [bot.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/bot.php) and [settings-example.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/settings-example.php)
 - Copy `settings-example.php` to `settings-<instance>.php`
 - Create a Freenode account for the bot to authenticate (required by most/all servers). See `/msg nickserv help register`
-- Install pastebinit (recommended) `sudo apt install pastebinit` or [other](https://pkgs.org/download/pastebinit)
-- [Get a bitly token](https://bitly.com) (recommended)
+- Install pastebinit for help text (recommended) `sudo apt install pastebinit` or find a binary [here](https://pkgs.org/download/pastebinit)
+- [Get a bitly token](https://bitly.com) for short URLs (recommended)
 - Edit the `settings-<instance>.php` file to contain your settings, username and password
 - Run the bot with `php bot.php <instance>` or `php bot.php <instance> test` for test mode. On Linux it is recommended to run the bot in `screen` so closing the terminal won't kill the bot
+- For admin op commands give the bot account +o access with ChanServ for your channel. See `/msg chanserv help access`
 
 ## Setting up Services
 ### YouTube URL info and search via !yt
@@ -18,7 +19,9 @@ A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 - "Where will you be calling the API from?" CLI Tool
 - Under Credentials create an API key
 - Add the API key to the `$youtube_api_key` variable in `settings-<instance>.php`
-- Usage is free for hundreds of thousands of queries per day
+- Usage is free for thousands of queries per day
+
+### (Todo: many more)
 
 ## Custom Triggers
 You can set up custom triggers in `settings-<instance>.php` files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
