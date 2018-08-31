@@ -57,27 +57,14 @@ $helptxt.="admin commands:
 note: commands may be used in channel or pm. separate multiple hostmasks with spaces. bans, quiets, invites occur in $channel.";
 
 // update help paste only if changed
-$help_changed=true;
-if(isset($botdata->help_url)){
-	echo "Checking if help text changed.. ";
-	$html=file_get_contents($botdata->help_url);
-	$pos=strrpos($html,'<pre>');
-	if($pos!==false){
-		$html=substr($html,$pos+5);
-		$html=substr($html,0,strrpos($html,'</pre>'));
-		$html=trim(htmlspecialchars_decode($html,ENT_QUOTES));
-		if($helptxt<>$html){
-			echo "yes, creating new paste\n";
-			$help_changed=true;
-		} else {
-			$help_changed=false;
-			$help_url=$botdata->help_url_short;
-			echo "no, help_url=$help_url\n";
-		}
-	}
+echo "Checking if help text changed.. ";
+if(!isset($botdata->help_text) || (isset($botdata->help_text) && $botdata->help_text<>$helptxt)) echo "yes, creating new paste\n";
+else {
+	$help_url=$botdata->help_url_short;
+	echo "no, help_url=$help_url\n";
 }
 
-if(!isset($botdata->help_url) || $help_changed){
+if(!isset($help_url)){
 	file_put_contents("./help-$nick",$helptxt);
 	$help_url=trim(shell_exec("pastebinit ./help-$nick"));
 	unlink("./help-$nick");
@@ -91,6 +78,7 @@ if(!isset($botdata->help_url) || $help_changed){
 		$help_url=make_bitly_url($help_url);
 		echo "short help url=$help_url\n";
 		$botdata->help_url_short=$help_url;
+		$botdata->help_text=$helptxt;
 		file_put_contents($datafile, json_encode($botdata));
 	}
 }
