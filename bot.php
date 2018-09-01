@@ -22,7 +22,7 @@ $botdata=json_decode(file_get_contents($datafile));
 if(isset($botdata->nick)) $nick=$botdata->nick;
 
 $helptxt = "*** $nick $channel !help ***\n\nglobal commands:\n";
-if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $helptxt.=" {$v[0]} - {$v[3]}\n";
+if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $helptxt.=" {$v[3]}\n";
 $helptxt.=" !w <term> - search Wikipedia and output a link if something is found
  !g <query> - create and output a Google search link
  !g- <query> - create and output a LMGTFY search link
@@ -37,7 +37,7 @@ if(!empty($bible_key)) $helptxt.=" !kj or !kjv <verses> - retrieve bible verses\
 $helptxt.=" !flip - flip a coin (call heads or tails first!)
  !8 or !8ball - magic 8-ball\n";
 if(file_exists('/usr/games/fortune')) $helptxt.=" !f or !fortune - fortune\n";
-$helptxt.=" !insult [target] - Deliver a Shakespearian insult to the channel with an optional target\n\n";
+$helptxt.=" !insult [target] - deliver a Shakespearian insult to the channel with an optional target\n\n";
 $helptxt.="admin commands:
  !s or !say <text> - output text to channel
  !e or !emote <text> - emote text to channel
