@@ -1082,8 +1082,8 @@ function curlget($opts=[]){
 	curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($handle,$data){
 		global $curl_response;
 		$curl_response.=$data;
-		if(strlen($curl_response)>(250*1024)){
-			echo "aborting download at 250KB\n";
+		if(strlen($curl_response)>1048576){ // up to 768KB required for amazon link titles
+			echo "aborting download at 1MB\n";
 			return 0;
 		} else return strlen($data);
 	});
