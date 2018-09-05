@@ -76,8 +76,8 @@ $disable_titles=false;
 // - with PM true $target global holds the target whether channel or user, respond with e.g. send("PRIVMSG $target :<text>\n");
 // - with PM false send to $channel global instead
 $custom_triggers=[
-	['!rules-example','Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'],
-	['!func-example','function:example_words', true, '!func-example - Output a random word']
+	['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'],
+	['!func-example', 'function:example_words', true, '!func-example - Output a random word']
 ];
 
 function example_words(){
