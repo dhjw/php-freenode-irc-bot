@@ -33,15 +33,13 @@ $title_replaces=[
 	$connect_ip=>'6.9.6.9', // for privacy (ip can still be determined by web logs)
 	gethostbyaddr($connect_ip)=>'example.com'
 ];
-// bold titles. channel needs +c for color support
-$title_bold=true;
 
 # nicks to ignore urls from
 $ignore_nicks=[
 	// 'otherbot'
 ];
 
-# urls to ignore
+# urls to ignore. case insensitive, automatic wildcard at beginning and end
 $ignore_urls=[
 	// 'https://example.com',
 ];
@@ -63,7 +61,8 @@ $flood_max_dupe_lines=3;
 $flood_max_dupe_time=600;
 
 // more options
-$voice_bot=false; // voice the bot (requires +o channel flag)
+$title_bold=true; // bold url titles. requires channel mode +c for color support
+$voice_bot=false; // voice the bot. requires +o channel access
 $disable_sasl=false;
 $disable_nickserv=false; // note: nickserv not used if sasl enabled
 $disable_help=false;
