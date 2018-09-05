@@ -63,6 +63,7 @@ $flood_max_dupe_lines=3;
 $flood_max_dupe_time=600;
 
 // more options
+$voice_bot=false; // voice the bot (requires +o channel flag)
 $disable_sasl=false;
 $disable_nickserv=false; // note: nickserv not used if sasl enabled
 $disable_help=false;

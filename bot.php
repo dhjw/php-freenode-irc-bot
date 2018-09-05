@@ -284,6 +284,8 @@ while(1){
 		if($code=='315'){
 			echo "Join to $channel complete. Users (nick, host, account):\n";
 			foreach($users as $tmp) echo "\t{$tmp['nick']}\t{$tmp['host']}\t{$tmp['account']}\n";
+			// voice bot if enabled
+			if(!empty($voice_bot)) send("PRIVMSG ChanServ :VOICE $channel\n");
 			continue;
 		}
 
