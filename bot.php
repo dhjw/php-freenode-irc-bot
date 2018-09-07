@@ -942,7 +942,7 @@ while(1){
 						print_r($purl);
 						if(!empty($purl['fragment'])) $tmp='#'.$purl['fragment']; else $tmp='';
 						$e=get_wiki_extract(str_replace('/wiki/','',$purl['path'].$tmp),320);
-						if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki not found.\n");
+						if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
 						continue;
 					}
 					// imdb
@@ -1366,11 +1366,9 @@ function timedquiet($secs=0,$mask){
 }
 
 function get_wiki_extract($q,$len=280){
-	global $custom_curl_iface, $curl_iface;
 	echo "get_wiki_extract($q,$len)\n";
 	$q=urldecode($q);
-	# $tmp = file_get_contents("https://en.wikipedia.org/w/api.php?action=query&titles=".urlencode($q)."&prop=extracts&format=json&redirects");
-	$url="https://en.wikipedia.org/w/api.php?action=query&titles=".urlencode($q)."&prop=extracts&format=json&redirects";
+	$url="https://en.wikipedia.org/w/api.php?action=query&titles=".urlencode($q)."&prop=extracts&format=json&redirects&formatversion=2&explaintext";
 	while(1){
 		echo "wikipedia connect.. url=$url.. ";
 		$tmp=curlget([CURLOPT_URL=>$url]);
@@ -1385,21 +1383,17 @@ function get_wiki_extract($q,$len=280){
 		$tmp=json_decode($tmp);
 		foreach($tmp->query->pages as $k){
 			if(mb_strpos($q,'#')!==false){ // jump to fragment
-				$frag=mb_substr($q,mb_strpos($q,'#')+1);
-				$frag="id=\"$frag\"";
-				if(mb_strpos($k->extract,$frag)!==false)
-					$k->extract=mb_substr($k->extract,mb_strpos($k->extract,$frag)+mb_strlen($frag)+1);
-				#echo "FINAL={$k->extract}\n";
+				$frag=trim(str_replace('_',' ',mb_substr($q,mb_strpos($q,'#')+1)));
+				$k->extract=str_replace(['======','=====','====','==='],'==',$k->extract);
+				$pos=mb_stripos($k->extract,"\n== $frag ==\n");
+				if($pos!==false) $k->extract=mb_substr($k->extract,$pos);
 			}
-			$e=str_replace("</h2>",':',$k->extract);
-			$e=str_replace("</h3>",':',$e);
-			$e=str_replace("</h4>",':',$e);
-			$e=str_replace("\r\n","\n",$e);
-			$e=str_replace("\n",' ',$e);
-			$e=str_replace("\t",' ',$e);
+			$arr=explode("\n",trim($k->extract)); // reformat section headers
+			foreach($arr as $k=>$v) if(substr($v,0,2)=='==' && substr($v,-2,2)=='==') $arr[$k]=trim(str_replace('=','',$v)).': ';
+			$e=implode("\n",$arr);
+			$e=str_replace(["\n","\t"],' ',$e);
 			$e=strip_tags($e);
 			$e=preg_replace('/\s+/m', ' ', $e);
-			#echo "e=$e\nstrlen=".strlen($e)."\n";
 			if(mb_strlen($e)>$len){
 				$e=mb_substr($e,0,$len);
 				$e=mb_substr($e,0,mb_strrpos($e,' ')+1); // cut to last whole word
@@ -1416,7 +1410,6 @@ function get_wiki_extract($q,$len=280){
 }
 
 function get_true_random($min = 1, $max = 100) {
-	global $custom_curl_iface,$curl_iface;
 	$max = ((int) $max >= 1) ? (int) $max : 100;
 	$min = ((int) $min < $max) ? (int) $min : 1;
 	$r=curlget([CURLOPT_URL=>'http://www.random.org/integers/?num=1&min='. $min . '&max=' . $max . '&col=1&base=10&format=plain&rnd=new']);
