@@ -724,7 +724,7 @@ while(1){
 			} elseif($trigger == '!tr' || $trigger == '!translate'){
 				echo "!translate\n";
 				// get a token
-				passthru("gcloud config set account $gcloud_service_account && gcloud auth activate-service-account $gcloud_service_account --key-file=$gcloud_translate_keyfile");
+				passthru("gcloud auth activate-service-account --key-file=$gcloud_translate_keyfile");
 				$tmp2=rtrim(shell_exec("gcloud auth print-access-token"));
 				$words=explode(' ',$args);
 				if(strpos($words[0],'-')!==false&&strlen($words[0])==5){
