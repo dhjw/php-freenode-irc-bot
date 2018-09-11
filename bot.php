@@ -1049,6 +1049,9 @@ while(1){
 
 			}
 		}
+		// custom loop
+		if(function_exists('custom_loop')) custom_loop($data);
+		
 		#echo "DATA=$data msg=$msg ex=".print_r($ex,true)."\n";
 		if(timedout() || empty($data) || ($ex[1]=='NOTICE' && strstr($data,":Server Terminating. Received SIGTERM")!==false) || (isme() && $ex[1]=='QUIT' && strstr($data,":Ping timeout")!==false)){ $connect=1; break; }
 	}

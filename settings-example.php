@@ -86,3 +86,8 @@ function example_words(){
 	$out=$words[rand(0,count($words)-1)];
 	send("PRIVMSG $target :$out\n");
 }
+
+// custom loop (runs on every line received from the server, after connection)
+// function custom_loop($data){
+// 	// code
+// }
