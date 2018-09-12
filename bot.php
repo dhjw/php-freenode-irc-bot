@@ -26,11 +26,12 @@ if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $he
 $helptxt.=" !w <term> - search Wikipedia and output a link if something is found
  !g <query> - create and output a Google search link
  !g- <query> - create and output a LMGTFY search link
- !i <query> - create and output a Google images link\n";
+ !i <query> - create and output a Google Images link\n";
 if(!empty($youtube_api_key)) $helptxt.=" !yt <query> - search YouTube and output a link to the first result\n";
-if(!empty($omdb_key)) $helptxt.=" !m <query or IMDb id e.g. tt123456> - search OMDBapi and output media info if found\n";
+if(!empty($omdb_key)) $helptxt.=" !m <query or IMDb id e.g. tt123456> - search OMDB and output media info if found\n";
 if(!empty($currencylayer_key)) $helptxt.=" !cc <amount> <from_currency> <to_currency> - currency converter\n";
-if(!empty($wolfram_appid)) $helptxt.=" !wa <query> - query wolfram alpha\n";
+if(!empty($wolfram_appid)) $helptxt.=" !wa <query> - query Wolfram Alpha\n";
+$helptxt.=" !u or !ud <term> - query Urban Dictionary\n";
 if(!empty($geo_key)) $helptxt.=" !geo <host or IP> - get geolocation of host or IP\n";
 if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages. see http://bit.ly/iso639-1\n";
 if(!empty($bible_key)) $helptxt.=" !kj or !kjv <verses> - retrieve bible verses\n";
@@ -801,6 +802,35 @@ while(1){
 				}
 				else send("PRIVMSG $privto :Data not available.\n");
 				continue;
+			} elseif($trigger == '!u' || $trigger == '!ud'){
+				// urban dictionary
+				if(empty($args)){ send("PRIVMSG $privto :Provide a term to define.\n"); continue; }
+				$a=explode(' ',$args);
+				if(is_numeric($a[count($a)-1])){
+					$num=$a[count($a)-1]-1;
+					unset($a[count($a)-1]);
+					$q=implode(' ',$a);
+				} else {
+					$num=0;
+					$q=$args;
+				}
+				echo "!ud called, q=$q num=$num\n";
+				$r=curlget([CURLOPT_URL=>'http://api.urbandictionary.com/v0/define?term='.urlencode($q)]);
+				$r=json_decode($r);
+				if(empty($r) || empty($r->list[0])){ send("PRIVMSG $privto :Term not found.\n"); continue; }
+				if(empty($r->list[$num])){ send("PRIVMSG $privto :Definition not found.\n"); continue; }
+				$d=trim(preg_replace("/\s+/",' ',str_replace(["\r","\n","\t","[","]"],' ',$r->list[$num]->definition)));
+				$d=str_replace(' .','.',$d);
+				$d=str_replace(' ,',',',$d);
+				if(mb_strlen($d)>360){
+					$d=trim(mb_substr($d,0,360));
+					$d=mb_substr($d,0,mb_strrpos($d,' ')+1);
+					$d=rtrim($d," ;.,");
+					$o="\"$d ...\"";
+				} else $o="\"$d\"";
+				if(strtolower($r->list[$num]->word)<>strtolower($q)) $o="({$r->list[$num]->word}) $o";
+				$o.=' '.make_bitly_url($r->list[0]->permalink);
+				send("PRIVMSG $privto :$o\n");
 			} elseif($trigger == '!flip'){
 				$tmp=get_true_random(0,1);
 				if($tmp==0) $tmp='heads'; else $tmp='tails';
