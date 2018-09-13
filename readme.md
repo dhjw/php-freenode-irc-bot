@@ -5,7 +5,7 @@ A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 - Install php with cURL and pcntl support, e.g. on ubuntu `sudo apt install php7.2 php7.2-curl`
 - Clone this repository. `git clone https://github.com/dhjw/php-freenode-irc-bot` or just download [bot.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/bot.php) and [settings-example.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/settings-example.php)
 - Copy `settings-example.php` to `settings-<instance>.php`
-- Create a Freenode account for the bot to authenticate (required by most/all servers). See `/msg nickserv help register`
+- Create a Freenode account for the bot to authenticate. See `/msg nickserv help register`
 - Install pastebinit for help text (recommended) `sudo apt install pastebinit` or find a binary [here](https://pkgs.org/download/pastebinit)
 - [Get a bitly token](https://bitly.com) for short URLs (recommended)
 - Edit the `settings-<instance>.php` file to contain your settings, username and password
@@ -21,7 +21,7 @@ A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 - Add the API key to the `$youtube_api_key` variable in `settings-<instance>.php`
 - Usage is free for thousands of queries per day
 
-### (Todo: many more)
+### (Todo: documentation for many more - see settings file API key variables for supported services)
 
 ## Custom Triggers
 You can set up custom triggers in `settings-<instance>.php` files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
