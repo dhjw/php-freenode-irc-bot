@@ -1000,10 +1000,19 @@ while(1){
 					echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 					if(empty($html)){ echo "Error: response blank\n"; continue; }
 					$title='';
-					$dom = new DOMDocument();
+					$dom=new DOMDocument();
 					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
-						$list = $dom->getElementsByTagName("title");
-						if ($list->length > 0) $title = $list->item(0)->textContent;
+						if(!empty($title_og)){
+							$list=$dom->getElementsByTagName("meta");
+							foreach($list as $k=>$l)
+								if(!empty($l->attributes->getNamedItem('property')))
+									if($l->attributes->getNamedItem('property')->value=='og:title' && !empty($l->attributes->getNamedItem('content')->value))
+										$title=$l->attributes->getNamedItem('content')->value;
+						}
+						if(empty($title)){
+							$list=$dom->getElementsByTagName("title");
+							if($list->length>0) $title=$list->item(0)->textContent;
+						}
 					}
 					$orig_title=$title;
 					echo "orig title= ".print_r($title,true)."\n";
