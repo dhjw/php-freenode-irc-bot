@@ -1004,7 +1004,7 @@ while(1){
 					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
 						if(!empty($title_og)){
 							$list=$dom->getElementsByTagName("meta");
-							foreach($list as $k=>$l)
+							foreach($list as $l)
 								if(!empty($l->attributes->getNamedItem('property')))
 									if($l->attributes->getNamedItem('property')->value=='og:title' && !empty($l->attributes->getNamedItem('content')->value))
 										$title=$l->attributes->getNamedItem('content')->value;
