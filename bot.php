@@ -31,7 +31,7 @@ if(!empty($youtube_api_key)) $helptxt.=" !yt <query> - search YouTube and output
 if(!empty($omdb_key)) $helptxt.=" !m <query or IMDb id e.g. tt123456> - search OMDB and output media info if found\n";
 if(!empty($currencylayer_key)) $helptxt.=" !cc <amount> <from_currency> <to_currency> - currency converter\n";
 if(!empty($wolfram_appid)) $helptxt.=" !wa <query> - query Wolfram Alpha\n";
-$helptxt.=" !u or !ud <term> - query Urban Dictionary\n";
+$helptxt.=" !ud <term> - query Urban Dictionary\n";
 if(!empty($geo_key)) $helptxt.=" !geo <host or IP> - get geolocation of host or IP\n";
 if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages. see http://bit.ly/iso639-1\n";
 if(!empty($bible_key)) $helptxt.=" !kj or !kjv <verses> - retrieve bible verses\n";
@@ -802,7 +802,7 @@ while(1){
 				}
 				else send("PRIVMSG $privto :Data not available.\n");
 				continue;
-			} elseif($trigger == '!u' || $trigger == '!ud'){
+			} elseif($trigger == '!ud'){
 				// urban dictionary
 				if(empty($args)){ send("PRIVMSG $privto :Provide a term to define.\n"); continue; }
 				$a=explode(' ',$args);
