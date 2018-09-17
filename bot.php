@@ -819,7 +819,8 @@ while(1){
 				$r=json_decode($r);
 				if(empty($r) || empty($r->list[0])){ send("PRIVMSG $privto :Term not found.\n"); continue; }
 				if(empty($r->list[$num])){ send("PRIVMSG $privto :Definition not found.\n"); continue; }
-				$d=trim(preg_replace("/\s+/",' ',str_replace(["\r","\n","\t","[","]"],' ',$r->list[$num]->definition)));
+				$d=str_replace(["\r","\n","\t"],' ',$r->list[$num]->definition);
+				$d=trim(preg_replace("/\s+/",' ',str_replace(["[","]"],'',$d)));
 				$d=str_replace(' .','.',$d);
 				$d=str_replace(' ,',',',$d);
 				if(mb_strlen($d)>360){
