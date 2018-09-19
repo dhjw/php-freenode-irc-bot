@@ -130,22 +130,27 @@ while(1){
 					if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR authenticating with SASL, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 				}
 			}
+			send("NICK $nick\n");
 			send("USER $ident $user $user :{$ircname}\n"); // first $user can be changed to modify ident and account login still works
 			if(!empty($pass)) send("PASS $pass\n");
-			send("NICK $nick\n");
 			send("CAP REQ account-notify\n");
 			send("CAP REQ extended-join\n");
-			// wait til end of motd
+			// set up and wait til end of motd
 			while($data=fgets($socket)){
 				echo $data;
 				$ex=explode(' ',trim($data));
+				if($ex[1]=='433'){
+					echo "Nick in use.. changing and reconnecting\n";
+					$nick=$orignick.$altchars[rand(0,count($altchars)-1)];
+					continue(2);
+				}
 				if($ex[1]=='376'){ echo "end of MOTD\n"; break; }
 				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 			}
 			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)){
 				echo "Authenticating with Nickserv\n";
 				send("PRIVMSG NickServ :IDENTIFY $user $pass\n");
-				sleep(2);
+				sleep(2); // helps ensure cloak is applied on join
 			}
 			if(empty($botmask)) send("WHOIS $nick\n"); // non-sasl botmask detection
 			sleep(1);
@@ -224,14 +229,6 @@ while(1){
 				$botmask=$ex[5];
 				echo "botmask=$botmask\n";
 			}
-		}
-		
-		if($ex[1] == '451'){
-			echo "* Not registered (Nick in use on connect, getting a new one..)\n";
-			shuffle($altchars);
-			$nick=$orignick.$altchars[0];
-			$connect=1;
-			break;
 		}
 		// recover main nick
 		if($nick<>$orignick && $time-$connect_time>=10 && $time-$last_nick_change>=10){
