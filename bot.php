@@ -544,8 +544,7 @@ while(1){
 						$nooutput=true;
 						continue;
 					}
-					// echo "CURLINFO:".print_r(curl_getinfo($ch),true)."\n";
-					$url = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+					$url = $curl_info['EFFECTIVE_URL'];
 
 					if(strstr($response,'wgInternalRedirectTargetUrl')!==false){
 						echo "getting internal/actual wiki url.. ";
@@ -999,7 +998,17 @@ while(1){
 					}
 					$html=curlget([CURLOPT_URL=>$u]);
 					echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
-					if(empty($html)){ echo "Error: response blank\n"; continue; }
+					if(empty($html)){
+						if(strpos($curl_error,'SSL certificate problem')!==false){
+							echo "set \$allow_invalid_certs=true; in settings to skip certificate checking\n";
+							$title='[ SSL certificate problem ]';
+							if($title_bold) $title="\x02$title\x02";
+							send("PRIVMSG $channel :$title\n");
+							continue;
+						}
+						echo "Error: response blank\n";
+						continue;
+					}
 					$title='';
 					$dom=new DOMDocument();
 					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
@@ -1103,7 +1112,7 @@ while(1){
 // End Loop
 
 function curlget($opts=[]){
-	global $ch,$custom_curl_iface,$curl_iface,$user_agent,$curl_response;
+	global $custom_curl_iface,$curl_iface,$user_agent,$allow_invalid_certs,$curl_response,$curl_info,$curl_error;
 	$curl_response='';
 	$ch=curl_init();
 	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
@@ -1117,6 +1126,7 @@ function curlget($opts=[]){
 //	curl_setopt($ch, CURLOPT_VERBOSE, 1);
 //	curl_setopt($ch, CURLOPT_HEADER, 1);
 	curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
+	if(!empty($allow_invalid_certs)) curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_setopt($ch, CURLOPT_ENCODING , ""); // avoid gzipped result per http://stackoverflow.com/a/28295417
 	curl_setopt($ch, CURLOPT_HTTPHEADER, [ // seem to help some servers
 		'Connection: keep-alive',
@@ -1134,6 +1144,12 @@ function curlget($opts=[]){
 	});
 	curl_setopt_array($ch,$opts);
 	curl_exec($ch);
+	$curl_info=[
+		'EFFECTIVE_URL'=>curl_getinfo($ch,CURLINFO_EFFECTIVE_URL) // for loose-matching !wiki
+	];
+	$curl_error=curl_error($ch);
+	if(!empty($curl_error)) echo "curl error: $curl_error\n";
+	curl_close($ch);
 	return $curl_response;
 }
 

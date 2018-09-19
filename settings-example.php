@@ -60,6 +60,7 @@ $flood_max_dupe_lines=3;
 $flood_max_dupe_time=600;
 
 // more options
+$allow_invalid_certs=false; // allow connections to sites with invalid ssl certificates
 $title_bold=false; // bold url titles. requires channel mode +c for color support
 $title_og=false; // use social media <meta property="og:title" ...> titles instead of <title> tags, if available
 $voice_bot=false; // voice the bot. requires +o channel access
