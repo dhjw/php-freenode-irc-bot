@@ -53,8 +53,9 @@ $helptxt.="admin commands:
  !fyc [mins] <nick or hostmask> - ban by hostmask with redirect to ##fix_your_connection for [mins] or default 60 mins
  !nick <nick> - Change the bot's nick
  !invite <nick> - invite to channel
- !restart - reload the bot
- !die - kill the bot
+ !restart [message] - reload bot with optional quit message
+ !update [message] - update bot with the latest from github and reload with optional quit message
+ !die [message] - kill bot with optional quit message
 note: commands may be used in channel or pm. separate multiple hostmasks with spaces. bans, quiets, invites occur in $channel.";
 
 // update help paste only if changed
@@ -468,7 +469,7 @@ while(1){
 				send("PRIVMSG ChanServ :TOPIC $channel $args\n");
 				continue;
 			} elseif($trigger == '!die'){
-				send("QUIT :$incnick told me to shut down\n");
+				send("QUIT :".(!empty($args)?$args:'shutdown')."\n");
 				exit;
 			} elseif($trigger == '!k' || $trigger == '!kick'){
 				$arr=explode(' ',$args);
@@ -496,6 +497,28 @@ while(1){
 				continue;
 			} elseif($trigger == '!restart'){
 				dorestart($args);
+			} elseif($trigger == '!update'){
+				$r=curlget([CURLOPT_URL=>'https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/bot.php']);
+				if(empty($r)){
+					send("PRIVMSG $privto :Error downloading update\n");
+					continue;
+				}
+				if($o=file_get_contents(dirname(__FILE__).'/bot.php')){
+					if($o==$r){
+						send("PRIVMSG $privto :Already up to date\n");
+						continue;
+					}
+				} else {
+					send("PRIVMSG $privto :Error reading current bot.php\n");
+					continue;
+				}
+				if(file_put_contents(dirname(__FILE__).'/bot.php',$r)){
+					send("PRIVMSG $privto :Update installed. See https://bit.ly/bupd8 for changes. Restarting\n");
+					dorestart(!empty($args)?$args:'update');
+				} else {
+					send("PRIVMSG $privto :Error writing updated bot.php\n");
+					continue;
+				}
 			} elseif($trigger == '!raw'){
 				send("$args\n");
 				continue;
