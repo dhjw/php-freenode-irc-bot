@@ -10,7 +10,7 @@ A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 - [Get a bitly token](https://bitly.com) for short URLs (recommended)
 - Edit the `settings-<instance>.php` file to contain your settings, username and password
 - Run the bot with `php bot.php <instance>` or `php bot.php <instance> test` for test mode. On Linux it is recommended to run the bot in `screen` so closing the terminal won't kill the bot
-- For admin op commands give the bot account +o access with ChanServ for your channel. See `/msg chanserv help access`
+- For admin op commands give the bot account +ort access with ChanServ for your channel. `/msg chanserv flags ##example botuser +ort`
 
 ## Setting up Services
 ### YouTube URL info and search via !yt
