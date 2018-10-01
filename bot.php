@@ -70,7 +70,7 @@ if(!isset($help_url)){
 	file_put_contents("./help-$nick",$helptxt);
 	$help_url=trim(shell_exec("pastebinit ./help-$nick"));
 	unlink("./help-$nick");
-	if(strpos($help_url,'/p/')===false){
+	if(strpos($help_url,'http')===false){
 	        echo "ERROR: Failed to paste help file! Is pastebinit installed? Help file disabled.\n";
 	        $help_url='';
 	}
