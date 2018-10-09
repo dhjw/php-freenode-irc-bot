@@ -633,6 +633,10 @@ while(1){
 				send("PRIVMSG $privto :Location: ".implode(', ',$out).$tmp2."\n");
 				continue;
 			} elseif($trigger == '!yt'){
+				if(empty($args)){
+					send("PRIVMSG $privto :Provide a query.\n");
+					continue;
+				}
 				for($i=$num_file_get_retries;$i>0;$i--){
 					$tmp=file_get_contents("https://www.googleapis.com/youtube/v3/search?q=".urlencode($args)."&part=snippet&maxResults=1&type=video&key=$youtube_api_key");
 					$tmp=json_decode($tmp);
