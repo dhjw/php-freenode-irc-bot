@@ -988,10 +988,8 @@ while(1){
 						continue;
 					}
 					// wikipedia
-					if(strstr($u,'wikipedia.org/wiki/')!==false && strstr($u,'wikipedia.org/wiki/File:')===false && strpos($u,"/web.archive.org/")===false){
-						print_r($purl);
-						if(!empty($purl['fragment'])) $tmp='#'.$purl['fragment']; else $tmp='';
-						$e=get_wiki_extract(str_replace('/wiki/','',$purl['path'].$tmp),320);
+					if(strpos($u,'wikipedia.org/wiki/')!==false && strpos($u,'wikipedia.org/wiki/File:')===false && strpos($u,"/web.archive.org/")===false){
+						$e=get_wiki_extract(substr($u,strpos($u,'/wiki/')+6),320);
 						if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
 						continue;
 					}
