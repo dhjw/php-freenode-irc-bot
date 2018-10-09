@@ -18,6 +18,7 @@ if(!empty($argv[2])){
 } else $datafile=__DIR__."/{$argv[1]}.data.json";
 
 // load data
+$instance_hash=md5(file_get_contents(dirname(__FILE__).'/bot.php'));
 $botdata=json_decode(file_get_contents($datafile));
 if(isset($botdata->nick)) $nick=$botdata->nick;
 
@@ -503,22 +504,16 @@ while(1){
 					send("PRIVMSG $privto :Error downloading update\n");
 					continue;
 				}
-				if($o=file_get_contents(dirname(__FILE__).'/bot.php')){
-					if($o==$r){
-						send("PRIVMSG $privto :Already up to date\n");
-						continue;
-					}
-				} else {
-					send("PRIVMSG $privto :Error reading current bot.php\n");
+				if($instance_hash==md5($r)){
+					send("PRIVMSG $privto :Already up to date\n");
 					continue;
 				}
-				if(file_put_contents(dirname(__FILE__).'/bot.php',$r)){
-					send("PRIVMSG $privto :Update installed. See https://bit.ly/bupd8 for changes. Restarting\n");
-					dorestart(!empty($args)?$args:'update');
-				} else {
+				if(file_get_contents(dirname(__FILE__).'/bot.php')<>$r && !file_put_contents(dirname(__FILE__).'/bot.php',$r)){
 					send("PRIVMSG $privto :Error writing updated bot.php\n");
 					continue;
 				}
+				send("PRIVMSG $privto :Update installed. See https://bit.ly/bupd8 for changes. Restarting\n");
+				dorestart(!empty($args)?$args:'update');
 			} elseif($trigger == '!raw'){
 				send("$args\n");
 				continue;
