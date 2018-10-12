@@ -61,7 +61,7 @@ $flood_max_dupe_time=600;
 
 // more options
 $allow_invalid_certs=false; // allow connections to sites with invalid ssl certificates
-$title_bold=false; // bold url titles. requires channel mode +c for color support
+$title_bold=false; // bold url titles. requires channel not have mode +c which strips colors
 $title_og=false; // use social media <meta property="og:title" ...> titles instead of <title> tags, if available
 $voice_bot=false; // voice the bot. requires +o channel access
 $disable_sasl=false;
@@ -74,8 +74,7 @@ $disable_titles=false;
 // array of arrays [ trigger, string to output (or function:name), respond via PM true or false (default true. if false always posts to channel), help text ]
 // with custom function
 // - $args holds all arguments sent with the trigger in a trimmed string
-// - with PM true $target global holds the target whether channel or user, respond with e.g. send("PRIVMSG $target :<text>\n");
-// - with PM false send to $channel global instead
+// - with PM true $target global holds the target whether channel or user, with PM false $target always holds channel, respond with e.g. send("PRIVMSG $target :<text>\n");
 $custom_triggers=[
 	['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'],
 	['!func-example', 'function:example_words', true, '!func-example - Output a random word']
@@ -92,4 +91,5 @@ function example_words(){
 // custom loop (runs on every line received from the server, after connection)
 // function custom_loop($data){
 // 	// code
+//	echo "[custom loop] data=$data\n";
 // }
