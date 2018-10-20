@@ -71,14 +71,15 @@ $disable_triggers=false;
 $disable_titles=false;
 
 // custom triggers (trigger in channel or pm will cause specific string to be output to channel or pm or a custom function to execute)
-// array of arrays [ trigger, string to output (or function:name), respond via PM true or false (default true. if false always posts to channel), help text ]
+// array of arrays, format:
+// [ trigger, string to output (or function:name), respond via PM true or false (if false always posts to channel), help text ]
 // with custom function
 // - $args holds all arguments sent with the trigger in a trimmed string
-// - with PM true $target global holds the target whether channel or user, with PM false $target always holds channel, respond with e.g. send("PRIVMSG $target :<text>\n");
-$custom_triggers=[
-	['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'],
-	['!func-example', 'function:example_words', true, '!func-example - Output a random word']
-];
+// - with PM true $target global holds the target whether channel or user, with PM false $target always holds channel, respond with e.g. send("PRIVMSG $target :text\n");
+
+// 2 examples below - remove // and restart bot to activate
+// $custom_triggers[]=['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'];
+// $custom_triggers[]=['!func-example', 'function:example_words', true, '!func-example - Output a random word'];
 
 function example_words(){
 	global $target,$args;
