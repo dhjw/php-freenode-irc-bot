@@ -992,6 +992,49 @@ while(1){
 						if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
 						continue;
 					}
+					// reddit comment
+					if(preg_match("#reddit.com/r/.*?/comments/.*?/.*?/(.+)[/]?#",$u,$m)){
+						if(strpos($m[1],'?')!==false) $m[1]=substr($m[1],0,strpos($m[1],'?')); // id
+						$m[1]=rtrim($m[1],'/');
+						echo "getting reddit comment. id={$m[1]}\n";
+						if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
+						for($i=2;$i>0;$i--){ // 2 tries
+							$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
+							if(!empty($j)){
+								if(!is_array($j) || !isset($j[1]->data->children[0]->data->id)){ echo "unknown error. response=".print_r($j,true); break; }
+								if($j[1]->data->children[0]->data->id<>$m[1]){ echo "error, comment id doesn't match\n"; break; }
+								$a=$j[1]->data->children[0]->data->author;
+								$e=html_entity_decode($j[1]->data->children[0]->data->body_html,ENT_QUOTES); // 'body' has weird format sometimes, predecode for &amp;quot;
+								$e=preg_replace('#<blockquote>.*?</blockquote>#ms',' (...) ',$e);
+								$e=preg_replace('#<code>(.*?)</code>#ms'," $1 ",$e);
+								$e=str_replace('<li>',' • ',$e);
+								$e=format_extract($e,280);
+								if(!empty($e)){
+									send("PRIVMSG $channel :[ $a: \"$e\" ]\n");
+									continue(2);
+								} else echo "error parsing reddit comment from html\n";
+							} else echo "error getting reddit comment\n";
+							if($i<>1) sleep(1);
+						}
+					}
+					// reddit title
+					if(preg_match("#reddit.com/r/.*?/comments/.+[/]?#",$u,$m)){
+						echo "getting reddit post title\n";
+						if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
+						for($i=2;$i>0;$i--){ // 2 tries
+							$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
+							if(!empty($j)){
+								if(!is_array($j) || !isset($j[0]->data->children[0]->data->title)){ echo "unknown error. response=".print_r($j,true); break; }
+								$t=$j[0]->data->children[0]->data->title;
+								$t=format_extract($t,280,['keep_quotes'=>1]);
+								if(!empty($t)){
+									send("PRIVMSG $channel :[ $t ]\n");
+									continue(2);
+								} else echo "error parsing reddit title from html\n";
+							} else echo "error getting reddit title\n";
+							if($i<>1) sleep(1);
+						}
+					}
 					// imdb
 					if(strstr($u,'imdb.com/title/tt')!==false){
 						$tmp=rtrim($purl['path'],'/');
@@ -1467,22 +1510,28 @@ function get_wiki_extract($q,$len=280){
 			$arr=explode("\n",trim($k->extract)); // reformat section headers
 			foreach($arr as $k=>$v) if(substr($v,0,2)=='==' && substr($v,-2,2)=='==') $arr[$k]=trim(str_replace('=','',$v)).': ';
 			$e=implode("\n",$arr);
-			$e=str_replace(["\n","\t"],' ',$e);
-			$e=strip_tags($e);
-			$e=preg_replace('/\s+/m', ' ', $e);
-			if(mb_strlen($e)>$len){
-				$e=mb_substr($e,0,$len);
-				$e=mb_substr($e,0,mb_strrpos($e,' ')+1); // cut to last whole word
-				$e=rtrim($e," ;.,"); // trim trailing punctuation from last word
-				$e=html_entity_decode($e);
-				$e.=' ...';
-			}
-			$e=trim(trim($e,'"')); // remove outside quotes because we wrap in quotes
+			$e=format_extract($e,$len);
 			echo "extract=$e\n";
 		}
 	}
 	return $e;
 
+}
+
+function format_extract($e,$len=280,$opts=[]){
+	$e=str_replace(["\n","\t"],' ',$e);
+	$e=html_entity_decode($e,ENT_QUOTES);
+	$e=preg_replace_callback("/(&#[0-9]+;)/", function($m){ return mb_convert_encoding($m[1],'UTF-8','HTML-ENTITIES'); },$e);
+	$e=strip_tags($e);
+	$e=preg_replace('/\s+/m', ' ', $e);
+	if(mb_strlen($e)>$len){
+		$e=mb_substr($e,0,$len);
+		$e=mb_substr($e,0,mb_strrpos($e,' ')+1); // cut to last whole word
+		$e=rtrim($e," ;.,"); // trim trailing punctuation from last word
+		$e.=' ...';
+	}
+	if(!isset($opts['keep_quotes'])) $e=trim(trim($e,'"')); // remove outside quotes because we wrap in quotes
+	return $e;
 }
 
 function get_true_random($min = 1, $max = 100) {
