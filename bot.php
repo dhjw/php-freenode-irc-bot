@@ -871,7 +871,7 @@ while(1){
 					send("PRIVMSG $privto :Please provide two numbers for min and max. e.g. !rand 1 5\n");
 					continue;
 				}
-				send("PRIVMSG $privto :".get_true_random($ex[4],$ex[5])."\n");
+				send("PRIVMSG $privto :".get_true_random($ex[4],$ex[5],!empty($ex[6])?$ex[6]:1)."\n");
 				continue;
 			} elseif($trigger == '!insult'){
 				if(!empty(trim($ex[4]))) $target=trim($ex[4]).': '; else $target='';
@@ -1534,11 +1534,13 @@ function format_extract($e,$len=280,$opts=[]){
 	return $e;
 }
 
-function get_true_random($min = 1, $max = 100) {
+function get_true_random($min = 1, $max = 100, $num = 1) {
 	$max = ((int) $max >= 1) ? (int) $max : 100;
 	$min = ((int) $min < $max) ? (int) $min : 1;
-	$r=curlget([CURLOPT_URL=>'http://www.random.org/integers/?num=1&min='. $min . '&max=' . $max . '&col=1&base=10&format=plain&rnd=new']);
-	return trim($r);
+	$num = ((int) $num >= 1) ? (int) $num : 1;
+	$r=curlget([CURLOPT_URL=>"http://www.random.org/integers/?num=$num&min=$min&max=$max&col=1&base=10&format=plain&rnd=new"]);
+	$r=trim(str_replace("\n",' ',$r));
+	return $r;
 }
 
 // ISO 639-1 Language Codes
