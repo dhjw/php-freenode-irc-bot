@@ -894,215 +894,226 @@ while(1){
 			print_r($urls);
 			if($urls){
 				foreach($urls as $u){
-					foreach($ignore_urls as $iu) if(stristr($u,$iu)!==false){ echo "ignored url\n"; continue(2); }
-					if(strpos($u,'google.com/search')!==false || strpos($u,'google.com/images')!==false || strpos($u,'scholar.google.com')!==false){ echo "Skipping URL...\n"; continue; } // skip google searches
-					$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
-					echo "Checking URL: $u\n";
-					$purl=parse_url($u);
-					print_r($purl);
-
-					// imgur titles by api
-					if(strpos($u,'//i.imgur.com/')!==false){
-						// get the id and use the api
-						echo "getting from imgur api..\n";
-						$tmp=substr($purl['path'],1);
-						$tmp=substr($tmp,0,strrpos($tmp,'.'));
-						$tmp=curlget([
-							CURLOPT_URL => "https://api.imgur.com/3/image/$tmp",
-							CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
-						]);
-						$tmp=json_decode($tmp);
-						echo "response=".print_r($tmp,true)."\n";
-						$out='';
-						if($tmp->success==1){
-							if(!empty($tmp->data->nsfw)) $out.='NSFW';
-							$tmpd=$tmp->data->description;
-							if(!empty($tmpd)){
-								if(!empty($out)) $out.=' - ';
-								foreach(["\r","\n","\t"] as $i) $tmpd=str_replace($i,' ',$tmpd);
-								$tmpd=preg_replace('!\s+!',' ',$tmpd);
-								$tmpd=trim(strip_tags($tmpd));
-								$out.=$tmpd;
-							}
-							if(!empty($out)){
-								$out="[ $out ]";
-								if($title_bold) $out="\x02$out\x02";
-								send("PRIVMSG $channel :$out\n");
-							}
-							// todo: output image size, etc?
-						} else echo "imgur image not found or api fail\n";
-						continue;
-
-						/*$tmparr=['.jpg','.jpeg','.gifv','.png','.webm','.gif','.mp4'];
-						foreach($tmparr as $tmpa){ // just one run if one of tmparr exists so it doesnt break url with unrec filetypes
-							if(strstr($u,$tmpa)!==false){
-								$u=str_replace('://i.','://',$u);
-								foreach($tmparr as $tmp) $u=str_replace($tmp,'',$u);
-								break;
+					$u_tries=0;
+					while(1){ // extra loop for retries
+						foreach($ignore_urls as $iu) if(stristr($u,$iu)!==false){ echo "ignored url\n"; continue(3); }
+						if(strpos($u,'google.com/search')!==false || strpos($u,'google.com/images')!==false || strpos($u,'scholar.google.com')!==false){ echo "Skipping URL...\n"; continue(2); } // skip google searches
+						$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
+						echo "Checking URL: $u\n";
+						$purl=parse_url($u);
+						print_r($purl);
+	
+						// imgur titles by api
+						if(strpos($u,'//i.imgur.com/')!==false){
+							// get the id and use the api
+							echo "getting from imgur api..\n";
+							$tmp=substr($purl['path'],1);
+							$tmp=substr($tmp,0,strrpos($tmp,'.'));
+							$tmp=curlget([
+								CURLOPT_URL => "https://api.imgur.com/3/image/$tmp",
+								CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
+							]);
+							$tmp=json_decode($tmp);
+							echo "response=".print_r($tmp,true)."\n";
+							$out='';
+							if($tmp->success==1){
+								if(!empty($tmp->data->nsfw)) $out.='NSFW';
+								$tmpd=$tmp->data->description;
+								if(!empty($tmpd)){
+									if(!empty($out)) $out.=' - ';
+									foreach(["\r","\n","\t"] as $i) $tmpd=str_replace($i,' ',$tmpd);
+									$tmpd=preg_replace('!\s+!',' ',$tmpd);
+									$tmpd=trim(strip_tags($tmpd));
+									$out.=$tmpd;
+								}
+								if(!empty($out)){
+									$out="[ $out ]";
+									if($title_bold) $out="\x02$out\x02";
+									send("PRIVMSG $channel :$out\n");
+								}
+								// todo: output image size, etc?
+							} else echo "imgur image not found or api fail\n";
+							continue(2);
+	
+							/*$tmparr=['.jpg','.jpeg','.gifv','.png','.webm','.gif','.mp4'];
+							foreach($tmparr as $tmpa){ // just one run if one of tmparr exists so it doesnt break url with unrec filetypes
+								if(strstr($u,$tmpa)!==false){
+									$u=str_replace('://i.','://',$u);
+									foreach($tmparr as $tmp) $u=str_replace($tmp,'',$u);
+									break;
+								}
+							}*/
+						}
+						$pathinfo=pathinfo($u);
+						if(in_array($pathinfo['extension'],['gif','jpg','jpeg','png','csv','pdf','xls','doc'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
+						/*if(strpos($u,'//news.mpxc.net/')!==false){ // one guy's links that do a dumb redirect...
+							echo "MPXC\n";
+							$tmp=file_get_contents($u);
+							if(strpos($tmp,'Redirecting...')!==false){
+								$tmp=substr($tmp,strpos($tmp,'<a href="')+9);
+								$u=substr($tmp,0,strpos($tmp,'"'));
 							}
 						}*/
-					}
-					$pathinfo=pathinfo($u);
-					if(in_array($pathinfo['extension'],['gif','jpg','jpeg','png','csv','pdf','xls','doc'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue; }
-					/*if(strpos($u,'//news.mpxc.net/')!==false){ // one guy's links that do a dumb redirect...
-						echo "MPXC\n";
-						$tmp=file_get_contents($u);
-						if(strpos($tmp,'Redirecting...')!==false){
-							$tmp=substr($tmp,strpos($tmp,'<a href="')+9);
-							$u=substr($tmp,0,strpos($tmp,'"'));
-						}
-					}*/
-
-					// youtube
-					$ytextra='';
-					$ytnotitle=false;
-					if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
-						if(strpos($u,'/youtu.be/')!==false) $v=substr($purl['path'],1);
-						else {
-							parse_str($purl['query'],$v);
-							$v=$v['v'];
-						}
-						echo "v=$v\n";
-						for($i=$num_file_get_retries;$i>0;$i--){
-							$tmp=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=".urlencode($v)."&part=snippet,contentDetails,statistics&maxResults=1&type=video&key=$youtube_api_key");
-							$tmp=json_decode($tmp);
-							echo "tmp=".print_r($tmp,true)."\n";
-							if(!empty($tmp)) break; else if($i>1) sleep(1);
-						}
-						if(empty($tmp)){
-							send("PRIVMSG $channel :[ Temporary YouTube API error ]\n");
-							continue;
-						} elseif(empty($v) || $tmp->pageInfo->totalResults==0){
-							send("PRIVMSG $channel :Video does not exist.\n");
-							continue;
-						}
+	
+						// youtube
 						$ytextra='';
-						$dur=covtime($tmp->items[0]->contentDetails->duration);
-						if($dur<>'0:00') $ytextra.=" - $dur";
-						#$ytextra.=" | {$tmp->items[0]->snippet->channelTitle}";
-						#$ytextra.=" | ".number_format($tmp2->items[0]->statistics->viewCount)." views";
-						$title="[ {$tmp->items[0]->snippet->title}$ytextra ]";
-						if($title_bold) $title="\x02$title\x02";
-						send("PRIVMSG $channel :$title\n");
-						continue;
-					}
-					// wikipedia
-					if(strpos($u,'wikipedia.org/wiki/')!==false && strpos($u,'wikipedia.org/wiki/File:')===false && strpos($u,"/web.archive.org/")===false){
-						$e=get_wiki_extract(substr($u,strpos($u,'/wiki/')+6),320);
-						if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
-						continue;
-					}
-					// reddit comment
-					if(preg_match("#reddit.com/r/.*?/comments/.*?/.*?/(.+)[/]?#",$u,$m)){
-						if(strpos($m[1],'?')!==false) $m[1]=substr($m[1],0,strpos($m[1],'?')); // id
-						$m[1]=rtrim($m[1],'/');
-						echo "getting reddit comment. id={$m[1]}\n";
-						if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
-						for($i=2;$i>0;$i--){ // 2 tries
-							$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
-							if(!empty($j)){
-								if(!is_array($j) || !isset($j[1]->data->children[0]->data->id)){ echo "unknown error. response=".print_r($j,true); break; }
-								if($j[1]->data->children[0]->data->id<>$m[1]){ echo "error, comment id doesn't match\n"; break; }
-								$a=$j[1]->data->children[0]->data->author;
-								$e=html_entity_decode($j[1]->data->children[0]->data->body_html,ENT_QUOTES); // 'body' has weird format sometimes, predecode for &amp;quot;
-								$e=preg_replace('#<blockquote>.*?</blockquote>#ms',' (...) ',$e);
-								$e=preg_replace('#<code>(.*?)</code>#ms'," $1 ",$e);
-								$e=str_replace('<li>',' • ',$e);
-								$e=format_extract($e,280);
-								if(!empty($e)){
-									send("PRIVMSG $channel :[ $a: \"$e\" ]\n");
-									continue(2);
-								} else echo "error parsing reddit comment from html\n";
-							} else echo "error getting reddit comment\n";
-							if($i<>1) sleep(1);
-						}
-					}
-					// reddit title
-					if(preg_match("#reddit.com/r/.*?/comments/.+[/]?#",$u,$m)){
-						echo "getting reddit post title\n";
-						if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
-						for($i=2;$i>0;$i--){ // 2 tries
-							$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
-							if(!empty($j)){
-								if(!is_array($j) || !isset($j[0]->data->children[0]->data->title)){ echo "unknown error. response=".print_r($j,true); break; }
-								$t=$j[0]->data->children[0]->data->title;
-								$t=format_extract($t,280,['keep_quotes'=>1]);
-								if(!empty($t)){
-									send("PRIVMSG $channel :[ $t ]\n");
-									continue(2);
-								} else echo "error parsing reddit title from html\n";
-							} else echo "error getting reddit title\n";
-							if($i<>1) sleep(1);
-						}
-					}
-					// imdb
-					if(strstr($u,'imdb.com/title/tt')!==false){
-						$tmp=rtrim($purl['path'],'/');
-						$tmp=substr($tmp,strpos($tmp,'/tt')+1);
-						if(strstr($tmp,'/')===false){ // skip if anything but a title main page link
-							echo "found imdb link id $tmp\n";
-							// same as !m by id, except no imdb link in output
-							$cmd="http://www.omdbapi.com/?i=".urlencode($tmp)."&apikey={$omdb_key}";
-							echo "cmd=$cmd\n";
+						$ytnotitle=false;
+						if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
+							if(strpos($u,'/youtu.be/')!==false) $v=substr($purl['path'],1);
+							else {
+								parse_str($purl['query'],$v);
+								$v=$v['v'];
+							}
+							echo "v=$v\n";
 							for($i=$num_file_get_retries;$i>0;$i--){
-								$tmp=file_get_contents($cmd);
+								$tmp=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=".urlencode($v)."&part=snippet,contentDetails,statistics&maxResults=1&type=video&key=$youtube_api_key");
 								$tmp=json_decode($tmp);
-								print_r($tmp);
+								echo "tmp=".print_r($tmp,true)."\n";
 								if(!empty($tmp)) break; else if($i>1) sleep(1);
 							}
-							if(empty($tmp)){ send("PRIVMSG $channel :OMDB API error.\n"); continue; }
-							if($tmp->Type=='movie') $tmp3=''; else $tmp3=" {$tmp->Type}";
-							if($tmp->Response=='True') send("PRIVMSG $channel :\xe2\x96\xb6 {$tmp->Title} ({$tmp->Year}$tmp3) | {$tmp->Genre} | {$tmp->Actors} | \"{$tmp->Plot}\" [{$tmp->imdbRating}]\n"); elseif($tmp->Response=='False') send("PRIVMSG $channel :{$tmp->Error}\n"); else send("PRIVMSG $channel :OMDB API error.\n");
-							continue;
-						}
-					}
-					$html=curlget([CURLOPT_URL=>$u]);
-					echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
-					if(empty($html)){
-						if(strpos($curl_error,'SSL certificate problem')!==false){
-							echo "set \$allow_invalid_certs=true; in settings to skip certificate checking\n";
-							$title='[ SSL certificate problem ]';
+							if(empty($tmp)){
+								send("PRIVMSG $channel :[ Temporary YouTube API error ]\n");
+								continue(2);
+							} elseif(empty($v) || $tmp->pageInfo->totalResults==0){
+								send("PRIVMSG $channel :Video does not exist.\n");
+								continue(2);
+							}
+							$ytextra='';
+							$dur=covtime($tmp->items[0]->contentDetails->duration);
+							if($dur<>'0:00') $ytextra.=" - $dur";
+							#$ytextra.=" | {$tmp->items[0]->snippet->channelTitle}";
+							#$ytextra.=" | ".number_format($tmp2->items[0]->statistics->viewCount)." views";
+							$title="[ {$tmp->items[0]->snippet->title}$ytextra ]";
 							if($title_bold) $title="\x02$title\x02";
 							send("PRIVMSG $channel :$title\n");
-							continue;
+							continue(2);
 						}
-						echo "Error: response blank\n";
-						continue;
-					}
-					$title='';
-					$dom=new DOMDocument();
-					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
-						if(!empty($title_og)){
-							$list=$dom->getElementsByTagName("meta");
-							foreach($list as $l)
-								if(!empty($l->attributes->getNamedItem('property')))
-									if($l->attributes->getNamedItem('property')->value=='og:title' && !empty($l->attributes->getNamedItem('content')->value))
-										$title=$l->attributes->getNamedItem('content')->value;
+						// wikipedia
+						if(strpos($u,'wikipedia.org/wiki/')!==false && strpos($u,'wikipedia.org/wiki/File:')===false && strpos($u,"/web.archive.org/")===false){
+							$e=get_wiki_extract(substr($u,strpos($u,'/wiki/')+6),320);
+							if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
+							continue(2);
 						}
-						if(empty($title)){
-							$list=$dom->getElementsByTagName("title");
-							if($list->length>0) $title=$list->item(0)->textContent;
+						// reddit comment
+						if(preg_match("#reddit.com/r/.*?/comments/.*?/.*?/(.+)[/]?#",$u,$m)){
+							if(strpos($m[1],'?')!==false) $m[1]=substr($m[1],0,strpos($m[1],'?')); // id
+							$m[1]=rtrim($m[1],'/');
+							echo "getting reddit comment. id={$m[1]}\n";
+							if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
+							for($i=2;$i>0;$i--){ // 2 tries
+								$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
+								if(!empty($j)){
+									if(!is_array($j) || !isset($j[1]->data->children[0]->data->id)){ echo "unknown error. response=".print_r($j,true); break; }
+									if($j[1]->data->children[0]->data->id<>$m[1]){ echo "error, comment id doesn't match\n"; break; }
+									$a=$j[1]->data->children[0]->data->author;
+									$e=html_entity_decode($j[1]->data->children[0]->data->body_html,ENT_QUOTES); // 'body' has weird format sometimes, predecode for &amp;quot;
+									$e=preg_replace('#<blockquote>.*?</blockquote>#ms',' (...) ',$e);
+									$e=preg_replace('#<code>(.*?)</code>#ms'," $1 ",$e);
+									$e=str_replace('<li>',' • ',$e);
+									$e=format_extract($e,280);
+									if(!empty($e)){
+										send("PRIVMSG $channel :[ $a: \"$e\" ]\n");
+										continue(3);
+									} else echo "error parsing reddit comment from html\n";
+								} else echo "error getting reddit comment\n";
+								if($i<>1) sleep(1);
+							}
 						}
-					}
-					$orig_title=$title;
-					echo "orig title= ".print_r($title,true)."\n";
-					$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
-					# strip numeric entities that don't seem to display right on IRC when converted
-					$title=preg_replace("/(&#[0-9]+;)/",'', $title);
-					$notitlehosts=['wikipedia.org'];
-					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet'];
-					foreach($notitlehosts as $nth) if(strpos($purl['host'],$nth)!==false && strpos($purl['path'],'/wiki/')!==false){ echo "string $nth found in URL $u. SKIPPING/IGNORING\n"; continue(2); }
-					foreach(["\r\n","\n","\t"] as $s) str_replace($s,' ',$title);
-					# $title=trim(substr(preg_replace('!\s+!', ' ', $title),0,390));
-					$title=trim(preg_replace('!\s+!', ' ', $title));
-					foreach($notitletitles as $ntt) if($title==$ntt) continue(2);
+						// reddit title
+						if(preg_match("#reddit.com/r/.*?/comments/.+[/]?#",$u,$m)){
+							echo "getting reddit post title\n";
+							if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
+							for($i=2;$i>0;$i--){ // 2 tries
+								$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
+								if(!empty($j)){
+									if(!is_array($j) || !isset($j[0]->data->children[0]->data->title)){ echo "unknown error. response=".print_r($j,true); break; }
+									$t=$j[0]->data->children[0]->data->title;
+									$t=format_extract($t,280,['keep_quotes'=>1]);
+									if(!empty($t)){
+										send("PRIVMSG $channel :[ $t ]\n");
+										continue(3);
+									} else echo "error parsing reddit title from html\n";
+								} else echo "error getting reddit title\n";
+								if($i<>1) sleep(1);
+							}
+						}
+						// imdb
+						if(strstr($u,'imdb.com/title/tt')!==false){
+							$tmp=rtrim($purl['path'],'/');
+							$tmp=substr($tmp,strpos($tmp,'/tt')+1);
+							if(strstr($tmp,'/')===false){ // skip if anything but a title main page link
+								echo "found imdb link id $tmp\n";
+								// same as !m by id, except no imdb link in output
+								$cmd="http://www.omdbapi.com/?i=".urlencode($tmp)."&apikey={$omdb_key}";
+								echo "cmd=$cmd\n";
+								for($i=$num_file_get_retries;$i>0;$i--){
+									$tmp=file_get_contents($cmd);
+									$tmp=json_decode($tmp);
+									print_r($tmp);
+									if(!empty($tmp)) break; else if($i>1) sleep(1);
+								}
+								if(empty($tmp)){ send("PRIVMSG $channel :OMDB API error.\n"); continue(2); }
+								if($tmp->Type=='movie') $tmp3=''; else $tmp3=" {$tmp->Type}";
+								if($tmp->Response=='True') send("PRIVMSG $channel :\xe2\x96\xb6 {$tmp->Title} ({$tmp->Year}$tmp3) | {$tmp->Genre} | {$tmp->Actors} | \"{$tmp->Plot}\" [{$tmp->imdbRating}]\n"); elseif($tmp->Response=='False') send("PRIVMSG $channel :{$tmp->Error}\n"); else send("PRIVMSG $channel :OMDB API error.\n");
+								continue(2);
+							}
+						}
+						$html=curlget([CURLOPT_URL=>$u]);
+						echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
+						if(empty($html)){
+							if(strpos($curl_error,'SSL certificate problem')!==false){
+								echo "set \$allow_invalid_certs=true; in settings to skip certificate checking\n";
+								$title='[ SSL certificate problem ]';
+								if($title_bold) $title="\x02$title\x02";
+								send("PRIVMSG $channel :$title\n");
+								continue(2);
+							}
+							echo "Error: response blank\n";
+							continue(2);
+						}
+						$title='';
+						$dom=new DOMDocument();
+						if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
+							if(!empty($title_og)){
+								$list=$dom->getElementsByTagName("meta");
+								foreach($list as $l)
+									if(!empty($l->attributes->getNamedItem('property')))
+										if($l->attributes->getNamedItem('property')->value=='og:title' && !empty($l->attributes->getNamedItem('content')->value))
+											$title=$l->attributes->getNamedItem('content')->value;
+							}
+							if(empty($title)){
+								$list=$dom->getElementsByTagName("title");
+								if($list->length>0) $title=$list->item(0)->textContent;
+							}
+						}
+						$orig_title=$title;
+						echo "orig title= ".print_r($title,true)."\n";
+						$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
+						# strip numeric entities that don't seem to display right on IRC when converted
+						$title=preg_replace("/(&#[0-9]+;)/",'', $title);
+						$notitlehosts=['wikipedia.org'];
+						$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet'];
+						foreach($notitlehosts as $nth) if(strpos($purl['host'],$nth)!==false && strpos($purl['path'],'/wiki/')!==false){ echo "string $nth found in URL $u. SKIPPING/IGNORING\n"; continue(3); }
+						foreach(["\r\n","\n","\t"] as $s) str_replace($s,' ',$title);
+						# $title=trim(substr(preg_replace('!\s+!', ' ', $title),0,390));
+						$title=trim(preg_replace('!\s+!', ' ', $title));
+						foreach($notitletitles as $ntt) if($title==$ntt) continue(3);
 						foreach($title_replaces as $k=>$v) $title=str_replace($k,$v,$title);
-					# if(!$title) $title = 'No title found.';
-					if($title){
-						$title="[ {$title}{$ytextra} ]";
-						if($title_bold) $title="\x02$title\x02";
-						echo "final title= $title\n";
-						send( "PRIVMSG $channel :$title\n");
+						# if(!$title) $title = 'No title found.';
+						if(strpos($u,'//twitter.com/')!==false) $title=str_replace_one(' on Twitter: "',': "',$title);
+						if($title){
+							$title="[ {$title}{$ytextra} ]";
+							if($title_bold) $title="\x02$title\x02";
+							echo "final title= $title\n";
+							send( "PRIVMSG $channel :$title\n");
+							break;
+						} else {
+							if(strpos($u,'//twitter.com/')!==false){ // retry twitter
+								$u_tries++;
+								if($u_tries==3){ echo "No title found.\n"; break; }
+								else { echo "No title found, retrying..\n"; sleep(1); }
+							} else break;
+						}
 					}
 				}
 			}
@@ -1693,3 +1704,8 @@ function s_insult(){
 	return 'Thou '.$words[0][rand(0,count($words[0])-1)].' '.$words[1][rand(0,count($words[1])-1)].' '.$words[2][rand(0,count($words[2])-1)].'!';
 }
 
+function str_replace_one($needle,$replace,$haystack){
+	$pos=strpos($haystack,$needle);
+	if($pos!==false) $newstring=substr_replace($haystack,$replace,$pos,strlen($needle)); else $newstring=$haystack;
+	return $newstring;
+}
