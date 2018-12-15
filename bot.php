@@ -812,13 +812,18 @@ while(1){
 				continue;
 			} elseif($trigger == '!wa'){
 				$u="http://api.wolframalpha.com/v2/query?input=".urlencode($args)."&output=plaintext&appid={$wolfram_appid}";
-				if(!$xml=new SimpleXMLElement(file_get_contents($u))) send("PRIVMSG $privto :Data not available.\n");
-				if(!empty($xml->pod[1]->subpod->plaintext)){
-					print_r($xml->pod);
-					if($xml->pod[1]->subpod->plaintext=='(data not available)') send("PRIVMSG $privto :Data not available.\n");
-					else send("PRIVMSG $privto :".trim(str_replace("\n",' ',$xml->pod[1]->subpod->plaintext))."\n");
+				try {
+					$xml=new SimpleXMLElement(file_get_contents($u));
+				} catch(Exception $e){
+					send("PRIVMSG $privto :API error, try again\n");
+					print_r($e);
+					continue;
 				}
-				else send("PRIVMSG $privto :Data not available.\n");
+				if(!empty($xml) && !empty($xml->pod[1]->subpod->plaintext)){
+					print_r([$xml->pod[0],$xml->pod[1]]);
+					if($xml->pod[1]->subpod->plaintext=='(data not available)') send("PRIVMSG $privto :Data not available.\n");
+					else send("PRIVMSG $privto :".trim(str_replace("\n",' • ',$xml->pod[1]->subpod->plaintext))."\n");
+				} else send("PRIVMSG $privto :Data not available.\n");
 				continue;
 			} elseif($trigger == '!ud'){
 				// urban dictionary
