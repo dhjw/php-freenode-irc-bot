@@ -1,16 +1,16 @@
 <?php
 // settings
-$admins = ['dw1']; // account names
-// $host = 'irc.freenode.net:6667';
-$host = 'ssl://irc.freenode.net:7000'; // ssl
-$channel = '##examplechan';
-$nick = 'somebot'; // default nick
-$test_channel = '##exampletest'; // run script as "php bot.php <instance> test" for test mode
-$test_nick = 'somebot[beta]';
-$user = 'your_username'; // Freenode account - required, for SASL
-$pass = 'your_password';
-$ident = 'bot'; // ident@...
-$ircname = 'a happy little bot by '.$admins[0]; // "real name" in /whois
+$admins=['dw1']; // array of account names
+// $host='irc.freenode.net:6667';
+$host='ssl://irc.freenode.net:7000'; // ssl
+$channel='##examplechan';
+$nick='somebot'; // default nick
+$test_channel='##exampletest'; // run script as "php bot.php <instance> test" for test mode
+$test_nick='somebot[beta]';
+$user='your_username'; // Freenode account - required, for SASL
+$pass='your_password';
+$ident='bot'; // ident@...
+$ircname='a happy little bot by '.$admins[0]; // "real name" in /whois
 $altchars=['_','^','-','`']; // for alt nicks
 $custom_connect_ip=false;
 $connect_ip='1.2.3.4'; // source IP, ipv4 or ipv6
