@@ -27,6 +27,11 @@ $currencylayer_key='';
 $omdb_key='';
 $wolfram_appid='';
 
+$tor_enabled=false; // handle .onion urls
+$tor_all=false; // get all urls through tor (not recommended due to anti-tor measures)
+$tor_host='127.0.0.1';
+$tor_port=9050;
+
 // replace in retrieved titles
 $title_replaces=[
 	$connect_ip=>'6.9.6.9', // for privacy (ip can still be determined by web logs)

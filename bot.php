@@ -907,7 +907,7 @@ while(1){
 						echo "Checking URL: $u\n";
 						$purl=parse_url($u);
 						print_r($purl);
-	
+
 						// imgur titles by api
 						if(strpos($u,'//i.imgur.com/')!==false){
 							// get the id and use the api
@@ -1063,7 +1063,14 @@ while(1){
 								continue(2);
 							}
 						}
-						$html=curlget([CURLOPT_URL=>$u]);
+						if(!empty($tor_enabled) && (substr($purl['host'],-6)=='.onion' || !empty($tor_all))){
+							echo "getting url title via tor\n";
+							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_TIMEOUT=>20]);
+							if(empty($html)){
+								send("PRIVMSG $channel :Tor error\n");
+								continue(2);
+							}
+						} else $html=curlget([CURLOPT_URL=>$u]);
 						echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 						if(empty($html)){
 							if(strpos($curl_error,'SSL certificate problem')!==false){
