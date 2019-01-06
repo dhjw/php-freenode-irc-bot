@@ -27,18 +27,18 @@ $currencylayer_key='';
 $omdb_key='';
 $wolfram_appid='';
 
-# replace in retrieved titles
+// replace in retrieved titles
 $title_replaces=[
 	$connect_ip=>'6.9.6.9', // for privacy (ip can still be determined by web logs)
 	gethostbyaddr($connect_ip)=>'example.com'
 ];
 
-# nicks to ignore urls from
+// nicks to ignore urls from
 $ignore_nicks=[
 	// 'otherbot'
 ];
 
-# urls to ignore. case insensitive, automatic wildcard at beginning and end
+// urls to ignore. case insensitive, automatic wildcard at beginning and end
 $ignore_urls=[
 	// 'https://example.com',
 ];
