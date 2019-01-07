@@ -46,6 +46,8 @@ function example_words(){
 	send("PRIVMSG $target :$out\n");
 }
 ```
-
 ## Contact
 Hit up `dw1` on Freenode with any questions or bugs.
+
+## License
+Do whatever you want with it.
