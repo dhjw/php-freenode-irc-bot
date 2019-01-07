@@ -1067,7 +1067,7 @@ while(1){
 							echo "getting url title via tor\n";
 							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_TIMEOUT=>20]);
 							if(empty($html)){
-								send("PRIVMSG $channel :Tor error\n");
+								send("PRIVMSG $channel :Tor error or site down\n");
 								continue(2);
 							}
 						} else $html=curlget([CURLOPT_URL=>$u]);
