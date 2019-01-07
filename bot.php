@@ -1057,9 +1057,11 @@ while(1){
 						}
 						if(!empty($tor_enabled) && (substr($purl['host'],-6)=='.onion' || !empty($tor_all))){
 							echo "getting url title via tor\n";
-							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_TIMEOUT=>20]);
+							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>20,CURLOPT_TIMEOUT=>20]);
 							if(empty($html)){
-								send("PRIVMSG $channel :Tor error or site down\n");
+								if(strpos($curl_error,"Failed to connect to $tor_host port $tor_port")!==false) send("PRIVMSG $channel :Tor error - is it running?\n");
+								elseif(strpos($curl_error,"Connection timed out after")!==false) send("PRIVMSG $channel :Tor connection timed out\n");
+								// else send("PRIVMSG $channel :Tor error or site down\n");
 								continue(2);
 							}
 						} else $html=curlget([CURLOPT_URL=>$u]);
