@@ -951,14 +951,6 @@ while(1){
 						}
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','jpg','jpeg','png','csv','pdf','xls','doc'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
-						/*if(strpos($u,'//news.mpxc.net/')!==false){ // one guy's links that do a dumb redirect...
-							echo "MPXC\n";
-							$tmp=file_get_contents($u);
-							if(strpos($tmp,'Redirecting...')!==false){
-								$tmp=substr($tmp,strpos($tmp,'<a href="')+9);
-								$u=substr($tmp,0,strpos($tmp,'"'));
-							}
-						}*/
 	
 						// youtube
 						$ytextra='';
