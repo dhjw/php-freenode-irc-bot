@@ -2,7 +2,7 @@
 A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 
 ### How to use
-- Install php with cURL and pcntl support, e.g. on ubuntu `sudo apt install php7.2 php7.2-curl`
+- Install php with pcntl, cURL, mbstring, xml and json support, e.g. on ubuntu `sudo apt install php php-curl php-mbstring php-xml php-json`
 - Clone this repository. `git clone https://github.com/dhjw/php-freenode-irc-bot` or just download [bot.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/bot.php) and [settings-example.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/settings-example.php)
 - Copy `settings-example.php` to `settings-<instance>.php`
 - Create a Freenode account for the bot to authenticate. See `/msg nickserv help register`
