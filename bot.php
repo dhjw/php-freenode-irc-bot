@@ -96,6 +96,7 @@ if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty(
 }
 if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
+if(empty($gcloud_translate_max_chars)) $gcloud_translate_max_chars=50000;
 $orignick=$nick;
 $lastnick='';
 $last_nick_change=0;
@@ -107,6 +108,7 @@ $check_lock=false;
 $lasttime=0;
 $users=[]; // user state data (nick, ident, host)
 $flood_lines=[];
+
 while(1){
 	if($connect){
 		while(1){
@@ -742,6 +744,16 @@ while(1){
 				continue;
 			} elseif($trigger == '!tr' || $trigger == '!translate'){
 				echo "!translate\n";
+				// check limit
+				$ym=date("Y-m");
+				if(!isset($botdata->translate_char_cnt)) $botdata->translate_char_cnt=[];
+				$botdata->translate_char_cnt=(array) $botdata->translate_char_cnt;
+				if(!isset($botdata->translate_char_cnt[$ym])) $botdata->translate_char_cnt[$ym]=0;
+				echo "Translate quota = {$botdata->translate_char_cnt[$ym]}/$gcloud_translate_max_chars\n";
+				if($botdata->translate_char_cnt[$ym]+strlen($args)>$gcloud_translate_max_chars){
+					send("PRIVMSG $privto :Monthly translate limit exceeded\n");
+					continue;
+				}
 				// get a token
 				passthru("gcloud auth activate-service-account --key-file=$gcloud_translate_keyfile");
 				$tmp2=rtrim(shell_exec("gcloud auth print-access-token"));
@@ -775,6 +787,8 @@ while(1){
 				} else {
 					send("PRIVMSG $privto :Could not translate.\n");
 				}
+				$botdata->translate_char_cnt[$ym]+=strlen($args);
+				file_put_contents($datafile,json_encode($botdata));
 				continue;
 			} elseif($trigger == '!cc'){
 				// currency converter
