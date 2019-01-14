@@ -882,7 +882,13 @@ while(1){
 				continue;
 			} elseif($trigger == '!f' || $trigger == '!fortune'){
 				// expects /usr/games/fortune to be installed
-				send("PRIVMSG $privto :".trim(preg_replace('!\s+!',' ',str_replace("\n",' ',shell_exec('/usr/games/fortune -s'))))."\n");
+				$args=trim(preg_replace("/[^[:alnum:][:space:]\-\/]/u",'',$args));
+				for($i=0;$i<2;$i++){
+				        $f=trim(preg_replace('!\s+!',' ',str_replace("\n",' ',shell_exec("/usr/games/fortune -s '$args' 2>&1"))));
+				        if($f=='No fortunes found'){ echo "Fortune type not found, getting from all.\n"; $args=''; continue; }
+				        break;
+				}
+				send("PRIVMSG $privto :$f\n");
 				continue;
 			} elseif($trigger == '!rand'){
 				echo "RAND ";
