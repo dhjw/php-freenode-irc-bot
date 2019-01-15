@@ -148,7 +148,7 @@ while(1){
 					$nick=$orignick.$altchars[rand(0,count($altchars)-1)];
 					continue(2);
 				}
-				if($ex[1]=='376'){ echo "end of MOTD\n"; break; }
+				if($ex[1]=='376') break; // end
 				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 			}
 			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)){
@@ -284,8 +284,8 @@ while(1){
 		}
 		// 315 end of WHO list
 		if($code=='315'){
-			echo "Join to $channel complete. Users (nick, host, account):\n";
-			foreach($users as $tmp) echo "\t{$tmp['nick']}\t{$tmp['host']}\t{$tmp['account']}\n";
+			echo "Join to $channel complete.\n";
+			// foreach($users as $tmp) echo "\t{$tmp['nick']}\t{$tmp['host']}\t{$tmp['account']}\n";
 			// voice bot if enabled
 			if(!empty($voice_bot)) send("PRIVMSG ChanServ :VOICE $channel\n");
 			continue;
@@ -296,17 +296,14 @@ while(1){
 			// just add the user to the array because they shouldnt be there already
 			// parse ex0 for username and hostmask
 			list($tmpnick,$tmphost)=parsemask($ex[0]);
-			echo "Join detected. nick=$tmpnick host=$tmphost account={$ex[3]}\n";
 			$users[]=['nick'=>$tmpnick, 'host'=>$tmphost, 'account'=>$ex[3]];
 			if($host_blacklist_enabled) check_blacklist($tmpnick,$tmphost);
 			#if(!isadmin()) check_dnsbl($tmpnick,$tmphost); else echo "dnsbl check skipped: isadmin\n";
 			continue;
 		}
 		if(($ex[1]=='PART' || $ex[1]=='QUIT' || $ex[1]=='KICK') && !isme()){
-			echo "Part detected.\n";
 			if($ex[1]=='KICK') $tmpnick=$ex[3]; else list($tmpnick)=parsemask($ex[0]);
 			$id=search_multi($users,'nick',$tmpnick);
-			echo "tmpnick=$tmpnick id=$id\n";
 			if(!empty($id)){
 				unset($users[$id]);
 				$users=array_values($users);
@@ -316,7 +313,6 @@ while(1){
 		if($ex[1]=='NICK' && !isme()){
 			list($tmpnick)=parsemask($ex[0]);
 			$id=search_multi($users,'nick',$tmpnick);
-			echo "tmpnick=$tmpnick id=$id\n";
 			if(!empty($id))	$users[$id]['nick']=rtrim(substr($ex[2],1));
 			else echo "ERROR: Nick changed but not in \$users. This should not happen! (unless it's me because isme() here is broken since added nick to it :p)\n";
 			continue;
@@ -912,11 +908,10 @@ while(1){
 			$msg=''; for($i=3; $i<count($ex); $i++){ $msg.=$ex[$i].' '; }
 			$msg=trim($msg);
 			$urls=geturls($msg);
-			echo "MSG=\"$msg\"\n";
+			// echo "MSG=\"$msg\"\n";
 			// allow 3 spaces at end of msg to disable title retrieval
-			echo "DEBUG=\"".substr($msg,strlen($msg)-1)."\"\n";
 			if(substr($msg,strlen($msg)-3)=='   '){ echo "skipping title processing due to 3 spaces\n"; unset($urls); }
-			print_r($urls);
+			// print_r($urls);
 			if($urls){
 				foreach($urls as $u){
 					$u_tries=0;
@@ -926,7 +921,7 @@ while(1){
 						$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
 						echo "Checking URL: $u\n";
 						$purl=parse_url($u);
-						print_r($purl);
+						// print_r($purl);
 
 						// imgur titles by api
 						if(strpos($u,'//i.imgur.com/')!==false){
@@ -939,7 +934,7 @@ while(1){
 								CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
 							]);
 							$tmp=json_decode($tmp);
-							echo "response=".print_r($tmp,true)."\n";
+							echo "response=".json_encode($tmp)."\n";
 							$out='';
 							if($tmp->success==1){
 								if(!empty($tmp->data->nsfw)) $out.='NSFW';
@@ -985,7 +980,7 @@ while(1){
 							for($i=$num_file_get_retries;$i>0;$i--){
 								$tmp=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=".urlencode($v)."&part=snippet,contentDetails,statistics&maxResults=1&type=video&key=$youtube_api_key");
 								$tmp=json_decode($tmp);
-								echo "tmp=".print_r($tmp,true)."\n";
+								echo "tmp=".json_encode($tmp)."\n";
 								if(!empty($tmp)) break; else if($i>1) sleep(1);
 							}
 							if(empty($tmp)){
@@ -1085,7 +1080,7 @@ while(1){
 								continue(2);
 							}
 						} else $html=curlget([CURLOPT_URL=>$u]);
-						echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
+						// echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 						if(empty($html)){
 							if(strpos($curl_error,'SSL certificate problem')!==false){
 								echo "set \$allow_invalid_certs=true; in settings to skip certificate checking\n";
@@ -1113,7 +1108,7 @@ while(1){
 							}
 						}
 						$orig_title=$title;
-						echo "orig title= ".print_r($title,true)."\n";
+						// echo "orig title= ".print_r($title,true)."\n";
 						$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 						# strip numeric entities that don't seem to display right on IRC when converted
 						$title=preg_replace("/(&#[0-9]+;)/",'', $title);
@@ -1153,7 +1148,6 @@ while(1){
 				list($tmpnick,$tmphost)=parsemask($ex[0]);
 				$msg=''; for($i=3; $i<count($ex); $i++){ $msg.=$ex[$i].' '; }
 				$msg=trim($msg);
-				echo "floodmsg=\"$msg\"\n";
 				$flood_lines[] = [$tmphost,$msg,microtime()];
 				if(count($flood_lines)>$flood_max_buffer_size) $tmp = array_shift($flood_lines);
 				
@@ -1165,7 +1159,6 @@ while(1){
 						$index2=$index-$i;
 						if($flood_lines[$index2][0]<>$flood_lines[$index][0]) $flooding=false;
 					}
-					echo "flooding1=$flooding isadmin=".isadmin()."\n";
 					if($flooding && !isme() && !isadmin()){
 						$tmphost=str_replace('@gateway/web/freenode/ip.','@',$tmphost);
 						timedquiet($flood_max_conseq_time,"*!*@$tmphost");
@@ -1175,17 +1168,12 @@ while(1){
 				
 				// if X of the same lines in a row by one person, quiet for 15 mins
 				if(count($flood_lines)>=$flood_max_dupe_lines){
-					#echo "flood_lines:";
-					#print_r($flood_lines);
 					$flooding=true;
 					$index=count($flood_lines)-1;
 					for($i=1;$i<=($flood_max_dupe_lines-1);$i++){
 						$index2=$index-$i;
-						#echo "test[$i] {$flood_lines[$index2][0]} vs. {$flood_lines[$index][0]}\n";
-						#echo "test[$i] {$flood_lines[$index2][1]} vs. {$flood_lines[$index][1]}\n";
 						if($flood_lines[$index2][0]<>$flood_lines[$index][0] || $flood_lines[($index2)][1]<>$flood_lines[$index][1]) $flooding=false;
 					}
-					echo "flooding2=$flooding isadmin=".isadmin()."\n";
 					if($flooding && !isme() && !isadmin()){
 						$tmphost=str_replace('@gateway/web/freenode/ip.','@',$tmphost);
 						timedquiet($flood_max_dupe_time,"*!*@$tmphost");
@@ -1255,7 +1243,7 @@ function isadmin(){
 	$n=substr($ex[0],1,strpos($ex[0],'!')-1);
 	$r=search_multi($users,'nick',$n);
 	if(empty($r)) return false;
-	if(in_array($users[$r]['account'],$admins)){ echo "isadmin!\n"; return true; } else { echo "notadmin\n"; return false; }
+	if(in_array($users[$r]['account'],$admins))return true; else return false;
 }
 function isme(){
 	global $botmask,$ex,$nick,$ident;
@@ -1267,9 +1255,9 @@ function geturls($s){
 	$out='';
 	// from https://mathiasbynens.be/demo/url-regex
 	// gruber v2 minus .
-	if(preg_match_all('#(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'",<>?«»“”‘’]))#iS', $s, $m)){ echo "gruber regex wins\n"; return $m[0]; }
+	if(preg_match_all('#(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'",<>?«»“”‘’]))#iS', $s, $m)) return $m[0];
 	// stephenhay minus ^ $
-	if(preg_match_all('@(https?|ftp)://[^\s/$.?#].[^\s]*@iS', $s, $m)){ echo "stephenhay regex wins\n"; return $m[0]; }
+	if(preg_match_all('@(https?|ftp)://[^\s/$.?#].[^\s]*@iS', $s, $m)) return $m[0];
 	return false;
 }
 
