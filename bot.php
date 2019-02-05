@@ -1024,7 +1024,9 @@ while(1){
 									$e=str_replace('<li>',' • ',$e);
 									$e=format_extract($e,280);
 									if(!empty($e)){
-										send("PRIVMSG $channel :[ $a: \"$e\" ]\n");
+										$t="[ $a: \"$e\" ]";
+										if($title_bold) $t="\x02$t\x02";
+										send("PRIVMSG $channel :$t\n");
 										continue(3);
 									} else echo "error parsing reddit comment from html\n";
 								} else echo "error getting reddit comment\n";
@@ -1042,7 +1044,9 @@ while(1){
 									$t=$j[0]->data->children[0]->data->title;
 									$t=format_extract($t,280,['keep_quotes'=>1]);
 									if(!empty($t)){
-										send("PRIVMSG $channel :[ $t ]\n");
+										$t="[ $t ]";
+										if($title_bold) $t="\x02$t\x02";
+										send("PRIVMSG $channel :$t\n");
 										continue(3);
 									} else echo "error parsing reddit title from html\n";
 								} else echo "error getting reddit title\n";
