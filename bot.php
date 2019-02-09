@@ -954,22 +954,11 @@ while(1){
 								// todo: output image size, etc?
 							} else echo "imgur image not found or api fail\n";
 							continue(2);
-	
-							/*$tmparr=['.jpg','.jpeg','.gifv','.png','.webm','.gif','.mp4'];
-							foreach($tmparr as $tmpa){ // just one run if one of tmparr exists so it doesnt break url with unrec filetypes
-								if(strstr($u,$tmpa)!==false){
-									$u=str_replace('://i.','://',$u);
-									foreach($tmparr as $tmp) $u=str_replace($tmp,'',$u);
-									break;
-								}
-							}*/
 						}
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','jpg','jpeg','png','csv','pdf','xls','doc'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
 	
 						// youtube
-						$ytextra='';
-						$ytnotitle=false;
 						if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
 							if(strpos($u,'/youtu.be/')!==false) $v=substr($purl['path'],1);
 							else {
@@ -1128,7 +1117,7 @@ while(1){
 						if(strpos($u,'//twitter.com/')!==false) $title=str_replace_one(' on Twitter: "',': "',$title);
 						if(strlen($title)>450) $title=substr($title,0,450).'...';
 						if($title){
-							$title="[ {$title}{$ytextra} ]";
+							$title="[ $title ]";
 							if($title_bold) $title="\x02$title\x02";
 							echo "final title= $title\n";
 							send( "PRIVMSG $channel :$title\n");
