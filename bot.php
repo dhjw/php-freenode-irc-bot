@@ -956,7 +956,7 @@ while(1){
 							continue(2);
 						}
 						$pathinfo=pathinfo($u);
-						if(in_array($pathinfo['extension'],['gif','jpg','jpeg','png','csv','pdf','xls','doc'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
+						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
 	
 						// youtube
 						if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
