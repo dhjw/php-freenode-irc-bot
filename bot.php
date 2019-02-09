@@ -1126,6 +1126,7 @@ while(1){
 						foreach($title_replaces as $k=>$v) $title=str_replace($k,$v,$title);
 						# if(!$title) $title = 'No title found.';
 						if(strpos($u,'//twitter.com/')!==false) $title=str_replace_one(' on Twitter: "',': "',$title);
+						if(strlen($title)>450) $title=substr($title,0,450).'...';
 						if($title){
 							$title="[ {$title}{$ytextra} ]";
 							if($title_bold) $title="\x02$title\x02";
