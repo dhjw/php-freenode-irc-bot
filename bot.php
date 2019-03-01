@@ -660,7 +660,8 @@ while(1){
 				if($dur<>'0:00') $ytextra.=" | $dur";
 				$ytextra.=" | {$tmp->items[0]->snippet->channelTitle}";
 				$ytextra.=" | ".number_format($tmp2->items[0]->statistics->viewCount)." views";
-				send("PRIVMSG $privto :https://youtu.be/$v | {$tmp->items[0]->snippet->title}$ytextra\n");
+				$title=html_entity_decode($tmp->items[0]->snippet->title,ENT_QUOTES);
+				send("PRIVMSG $privto :https://youtu.be/$v | $title$ytextra\n");
 				continue;
 			// bible
 			} elseif($trigger == '!kjv' || $trigger == '!kj'){
