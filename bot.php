@@ -940,9 +940,10 @@ while(1){
 							if($tmp->success==1){
 								if(!empty($tmp->data->nsfw)) $out.='NSFW';
 								$tmpd=$tmp->data->description;
+								if(empty($tmpd)) $tmpd=$tmp->data->title;
 								if(!empty($tmpd)){
 									if(!empty($out)) $out.=' - ';
-									foreach(["\r","\n","\t"] as $i) $tmpd=str_replace($i,' ',$tmpd);
+									$tmpd=str_replace(["\r","\n","\t"],' ',$tmpd);
 									$tmpd=preg_replace('!\s+!',' ',$tmpd);
 									$tmpd=trim(strip_tags($tmpd));
 									$out.=$tmpd;
