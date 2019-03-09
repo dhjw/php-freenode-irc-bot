@@ -1088,6 +1088,7 @@ while(1){
 							continue(2);
 						}
 						$title='';
+						$html=str_replace('<<','&lt;&lt;',$html); // rottentomatoes bad title html
 						$dom=new DOMDocument();
 						if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
 							if(!empty($title_og)){
