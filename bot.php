@@ -957,8 +957,6 @@ while(1){
 							} else echo "imgur image not found or api fail\n";
 							continue(2);
 						}
-						$pathinfo=pathinfo($u);
-						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
 	
 						// youtube
 						if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
@@ -996,6 +994,20 @@ while(1){
 							$e=get_wiki_extract(substr($u,strpos($u,'/wiki/')+6),320);
 							if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
 							continue(2);
+						}
+						// reddit image
+						if(strpos($u,'.redd.it/')!==false){
+							echo "getting reddit image title\n";
+							$q=substr($u,strpos($u,'.redd.it')+1);
+							for($i=2;$i>0;$i--){ // 2 tries
+								$j=json_decode(curlget([CURLOPT_URL=>"https://www.reddit.com/search.json?q=site:redd.it+url:$q"]));
+								if(isset($j->data) && isset($j->data->children) && isset($j->data->children[0])){
+									$t="[ {$j->data->children[0]->data->title} ]";
+									if($title_bold) $t="\x02$t\x02";
+									send("PRIVMSG $channel :$t\n");
+									continue(3);
+								}
+							}
 						}
 						// reddit comment
 						if(preg_match("#reddit.com/r/.*?/comments/.*?/.*?/(.+)[/]?#",$u,$m)){
@@ -1065,6 +1077,11 @@ while(1){
 								continue(2);
 							}
 						}
+						
+						// skips
+						$pathinfo=pathinfo($u);
+						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
+						
 						if(!empty($tor_enabled) && (substr($purl['host'],-6)=='.onion' || !empty($tor_all))){
 							echo "getting url title via tor\n";
 							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>20,CURLOPT_TIMEOUT=>20]);
