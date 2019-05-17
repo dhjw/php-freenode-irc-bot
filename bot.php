@@ -108,6 +108,7 @@ $check_lock=false;
 $lasttime=0;
 $users=[]; // user state data (nick, ident, host)
 $flood_lines=[];
+if(!isset($custom_loop_functions)) $custom_loop_functions=[];
 
 while(1){
 	if($connect){
@@ -164,14 +165,18 @@ while(1){
 		}
 	}
 	while($data = fgets($socket)) {
+		$time=time();
+		$ex=explode(' ',$data);
+		$code=$ex[1];
+		$incnick=substr($ex[0],1,strpos($ex[0],'!')-1);
 		echo $data;
-
-		// custom loop
-		if(function_exists('custom_loop')) custom_loop($data);
+		
+		// custom loop functions
+		foreach($custom_loop_functions as $f) call_user_func($f);
 
 		if(strpos($data,"ERROR :Closing Link:")!==false){ echo "ERROR, restarting..\n"; dorestart(null,false); }
+
 		// ongoing checks
-		$time=time();
 		if($time - $lasttime > 2 && $time - $connect_time > 10 && !$check_lock){
 			$check_lock=true;
 			$lasttime=$time;
@@ -220,11 +225,6 @@ while(1){
 			}
 			$check_lock=false;
 		}
-		// begin script
-		# echo $data;
-		$ex = explode(' ', $data);
-		$code = $ex[1];
-		$incnick = substr($ex[0],1,strpos($ex[0],'!')-1);
 
 		if(isset($ignore_nicks)&&is_array($ignore_nicks)&&!empty($incnick)) foreach($ignore_nicks as $ign){
 			$ign=preg_quote($ign).'.*';
@@ -1738,4 +1738,13 @@ function str_replace_one($needle,$replace,$haystack){
 	$pos=strpos($haystack,$needle);
 	if($pos!==false) $newstring=substr_replace($haystack,$replace,$pos,strlen($needle)); else $newstring=$haystack;
 	return $newstring;
+}
+
+function register_loop_function($f){
+	global $custom_loop_functions;
+	if(!isset($custom_loop_functions)) $custom_loop_functions=[];
+	if(!in_array($f,$custom_loop_functions)){
+		echo "adding custom loop function \"$f\"\n";
+		$custom_loop_functions[]=$f;
+	} else echo "skipping duplicate custom loop function \"$f\"\n";
 }

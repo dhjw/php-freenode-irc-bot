@@ -95,8 +95,9 @@ function example_words(){
 	send("PRIVMSG $target :$out\n");
 }
 
-// custom loop (runs on every line received from the server, after connection)
-// function custom_loop($data){
-// 	// code
-//	echo "[custom loop] data=$data\n";
+// custom loop functions
+// register_loop_function('plugin_loop_example');
+// function plugin_loop_example(){
+// 	global $data,$time,$channel;
+// 	echo "[custom loop] time=$time data=$data\n";
 // }

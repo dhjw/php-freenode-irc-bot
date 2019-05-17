@@ -26,7 +26,7 @@ A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 ## Custom Triggers
 You can set up custom triggers in `settings-<instance>.php` files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
 
-Examples of custom triggers are as follows:
+Examples of custom triggers:
 ```
 // custom triggers (trigger in channel or pm will cause specific string to be output to channel or pm or a custom function to execute)
 // array of arrays [ trigger, string to output (or function:name), respond via PM true or false (default true. if false always posts to channel), help text ]
@@ -44,6 +44,14 @@ function example_words(){
 	$words=['quick','brown','fox','jumps','over','lazy','dog'];
 	$out=$words[rand(0,count($words)-1)];
 	send("PRIVMSG $target :$out\n");
+}
+```
+Examples of custom loop functions:
+```
+register_loop_function('custom_loop_example');
+function custom_loop_example(){
+	global $data,$time,$channel;
+	echo "[custom loop] time=$time data=$data\n";
 }
 ```
 ## Contact
