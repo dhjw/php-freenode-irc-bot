@@ -1003,6 +1003,7 @@ while(1){
 						if(strpos($u,'.redd.it/')!==false){
 							echo "getting reddit image title\n";
 							$q=substr($u,strpos($u,'.redd.it')+1);
+							if(strpos($q,'?')!==false) $q=substr($q,0,strpos($q,'?'));
 							for($i=2;$i>0;$i--){ // 2 tries
 								$j=json_decode(curlget([CURLOPT_URL=>"https://www.reddit.com/search.json?q=site:redd.it+url:$q"]));
 								if(isset($j->data) && isset($j->data->children) && isset($j->data->children[0])){
