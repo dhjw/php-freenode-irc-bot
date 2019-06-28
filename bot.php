@@ -1021,7 +1021,7 @@ while(1){
 							echo "getting reddit comment. id={$m[1]}\n";
 							if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
 							for($i=2;$i>0;$i--){ // 2 tries
-								$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
+								$j=json_decode(curlget([CURLOPT_URL=>"$u.json",CURLOPT_HTTPHEADER=>["Cookie: _options=%7B%22pref_quarantine_optin%22%3A%20true%7D"]]));
 								if(!empty($j)){
 									if(!is_array($j) || !isset($j[1]->data->children[0]->data->id)){ echo "unknown error. response=".print_r($j,true); break; }
 									if($j[1]->data->children[0]->data->id<>$m[1]){ echo "error, comment id doesn't match\n"; break; }
@@ -1046,7 +1046,7 @@ while(1){
 							echo "getting reddit post title\n";
 							if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
 							for($i=2;$i>0;$i--){ // 2 tries
-								$j=json_decode(curlget([CURLOPT_URL=>"$u.json"]));
+								$j=json_decode(curlget([CURLOPT_URL=>"$u.json",CURLOPT_HTTPHEADER=>["Cookie: _options=%7B%22pref_quarantine_optin%22%3A%20true%7D"]]));
 								if(!empty($j)){
 									if(!is_array($j) || !isset($j[0]->data->children[0]->data->title)){ echo "unknown error. response=".print_r($j,true); break; }
 									$t=$j[0]->data->children[0]->data->title;
@@ -1061,6 +1061,14 @@ while(1){
 								if($i<>1) sleep(1);
 							}
 						}
+						// reddit general - ignore quarantine
+						if(preg_match("#reddit.com/r/.*#",$u)){
+							if(preg_match("#reddit.com/r/[^/]*$#",$u)) $u.='/';
+							preg_match("#https?://.*?\.?reddit.com(/.*)#",$u,$m);
+							$u="https://old.reddit.com{$m[1]}";
+							$header=["Cookie: _options={%22pref_quarantine_optin%22:true}"];
+						}
+						
 						// imdb
 						if(strstr($u,'imdb.com/title/tt')!==false){
 							$tmp=rtrim($purl['path'],'/');
@@ -1087,16 +1095,18 @@ while(1){
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
 						
+						if(!isset($header)) $header=[];
+						
 						if(!empty($tor_enabled) && (substr($purl['host'],-6)=='.onion' || !empty($tor_all))){
 							echo "getting url title via tor\n";
-							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>20,CURLOPT_TIMEOUT=>20]);
+							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>20,CURLOPT_TIMEOUT=>20,CURLOPT_HTTPHEADER=>$header]);
 							if(empty($html)){
 								if(strpos($curl_error,"Failed to connect to $tor_host port $tor_port")!==false) send("PRIVMSG $channel :Tor error - is it running?\n");
 								elseif(strpos($curl_error,"Connection timed out after")!==false) send("PRIVMSG $channel :Tor connection timed out\n");
 								// else send("PRIVMSG $channel :Tor error or site down\n");
 								continue(2);
 							}
-						} else $html=curlget([CURLOPT_URL=>$u]);
+						} else $html=curlget([CURLOPT_URL=>$u,CURLOPT_HTTPHEADER=>$header]);
 						// echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 						if(empty($html)){
 							if(strpos($curl_error,'SSL certificate problem')!==false){
@@ -1230,11 +1240,12 @@ function curlget($opts=[]){
 	curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
 	if(!empty($allow_invalid_certs)) curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_setopt($ch, CURLOPT_ENCODING , ""); // avoid gzipped result per http://stackoverflow.com/a/28295417
-	curl_setopt($ch, CURLOPT_HTTPHEADER, [ // seem to help some servers
+	$default_header=[ // seem to help some servers
 		'Connection: keep-alive',
 		'Upgrade-Insecure-Requests: 1',
 		'Accept-Language: en'
-	]);
+	];
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
 	// partially read big connections per https://stackoverflow.com/a/17641159
 	curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($handle,$data){
 		global $curl_response;
@@ -1244,6 +1255,7 @@ function curlget($opts=[]){
 			return 0;
 		} else return strlen($data);
 	});
+	if(!empty($opts[CURLOPT_HTTPHEADER])) $opts[CURLOPT_HTTPHEADER]=array_merge($default_header,$opts[CURLOPT_HTTPHEADER]);
 	curl_setopt_array($ch,$opts);
 	curl_exec($ch);
 	$curl_info=[
