@@ -23,8 +23,8 @@ A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
 
 ### (Todo: documentation for many more - see settings file API key variables for supported services)
 
-## Custom Triggers
-You can set up custom triggers in `settings-<instance>.php` files. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of triggers.
+## Custom Triggers & Plugins
+You can set up custom triggers and loop processes in `settings-<instance>.php` files directly or create plugin .php files and include them from there. Custom triggers are overridden by admin triggers and override global triggers, which you should probably avoid. See bot !help for a list of active triggers.
 
 Examples of custom triggers:
 ```
@@ -33,10 +33,8 @@ Examples of custom triggers:
 // with custom function
 // - $args holds all arguments sent with the trigger in a trimmed string
 // - with PM true $target global holds the target whether channel or user, with PM false $target always holds channel, respond with e.g. send("PRIVMSG $target :<text>\n");
-$custom_triggers=[
-	['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'],
-	['!func-example', 'function:example_words', true, '!func-example - Output a random word']
-];
+$custom_triggers[]=['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'];
+$custom_triggers[]=['!func-example', 'function:example_words', true, '!func-example - Output a random word'];
 
 function example_words(){
 	global $target,$args;
@@ -54,6 +52,11 @@ function custom_loop_example(){
 	echo "[custom loop] time=$time data=$data\n";
 }
 ```
+Example of including a plugin file containing triggers, functions and/or loop functions:
+```
+include('plugins/example.php');
+```
+
 ## Contact
 Hit up `dw1` on Freenode with any questions or bugs.
 

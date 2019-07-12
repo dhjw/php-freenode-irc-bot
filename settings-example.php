@@ -76,28 +76,4 @@ $disable_help=false;
 $disable_triggers=false;
 $disable_titles=false;
 
-// custom triggers (trigger in channel or pm will cause specific string to be output to channel or pm or a custom function to execute)
-// array of arrays, format:
-// [ trigger, string to output (or function:name), respond via PM true or false (if false always posts to channel), help text ]
-// with custom function
-// - $args holds all arguments sent with the trigger in a trimmed string
-// - with PM true $target global holds the target whether channel or user, with PM false $target always holds channel, respond with e.g. send("PRIVMSG $target :text\n");
-
-// 2 examples below - remove // and restart bot to activate
-// $custom_triggers[]=['!rules-example', 'Read the channel rules at https://example.com', true, '!rules-example - Read the channel rules'];
-// $custom_triggers[]=['!func-example', 'function:example_words', true, '!func-example - Output a random word'];
-
-function example_words(){
-	global $target,$args;
-	echo "!func-example / example_words() called by $target. args=$args\n";
-	$words=['quick','brown','fox','jumps','over','lazy','dog'];
-	$out=$words[rand(0,count($words)-1)];
-	send("PRIVMSG $target :$out\n");
-}
-
-// custom loop functions
-// register_loop_function('plugin_loop_example');
-// function plugin_loop_example(){
-// 	global $data,$time,$channel;
-// 	echo "[custom loop] time=$time data=$data\n";
-// }
+// see readme.md at https://github.com/dhjw/php-freenode-irc-bot for how to use custom triggers, loop processes and plugins
