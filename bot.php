@@ -172,7 +172,7 @@ while(1){
 		echo $data;
 		
 		// custom loop functions
-		foreach($custom_loop_functions as $f) call_user_func($f);
+		foreach($custom_loop_functions as $f) if($f()==2) continue(2);
 
 		if(strpos($data,"ERROR :Closing Link:")!==false){ echo "ERROR, restarting..\n"; dorestart(null,false); }
 
