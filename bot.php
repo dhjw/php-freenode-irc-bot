@@ -1091,6 +1091,25 @@ while(1){
 							}
 						}
 						
+						// outline.com
+						if(preg_match('#(?:https://)?outline\.com/([a-zA-Z0-9]*)(?:$|\?)#',$u,$m)){
+							echo "outline.com url detected\n";
+							if(!empty($m[1])){
+								$o=curlget([
+									CURLOPT_URL=>"https://outlineapi.com/v4/get_article?id=$m[1]",
+									CURLOPT_HTTPHEADER=>["Referer: ".(substr($m[0],0,8)=='https://'?$m[0]:"https://$m[0]").""]
+								]);
+								$o=json_decode($o);
+								if($o->success==true){
+									$t="[ {$o->data->title} ]";
+									$t=preg_replace('/\R/',' ',$t);
+									if($title_bold) $t="\x02$t\x02";
+									send("PRIVMSG $channel :$t\n");
+									continue(2);
+								}
+							}
+						}
+						
 						// skips
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
