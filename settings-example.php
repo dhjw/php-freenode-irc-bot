@@ -20,7 +20,6 @@ $stream_timeout=320;
 $youtube_api_key='';
 $bitly_token='';
 $geo_key=''; // ipinfodb.com
-$bible_key=''; // bibles.org
 $gcloud_translate_keyfile=''; // e.g. translate.json, per step 1 at https://cloud.google.com/translate/docs/getting-started, put in current folder
 $gcloud_translate_max_chars=50000; // per month, see https://cloud.google.com/translate/pricing
 $imgur_client_id='';

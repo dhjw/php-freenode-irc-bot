@@ -35,7 +35,6 @@ if(!empty($wolfram_appid)) $helptxt.=" !wa <query> - query Wolfram Alpha\n";
 $helptxt.=" !ud <term> [definition #] - query Urban Dictionary with optional definition number\n";
 if(!empty($geo_key)) $helptxt.=" !geo <host or IP> - get geolocation of host or IP\n";
 if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages. see http://bit.ly/iso639-1\n";
-if(!empty($bible_key)) $helptxt.=" !kj or !kjv <verses> - retrieve bible verses\n";
 $helptxt.=" !flip - flip a coin (call heads or tails first!)
  !8 or !8ball - magic 8-ball\n";
 if(file_exists('/usr/games/fortune')) $helptxt.=" !f or !fortune - fortune\n";
@@ -666,29 +665,6 @@ while(1){
 				$ytextra.=" | ".number_format($tmp2->items[0]->statistics->viewCount)." views";
 				$title=html_entity_decode($tmp->items[0]->snippet->title,ENT_QUOTES);
 				send("PRIVMSG $privto :https://youtu.be/$v | $title$ytextra\n");
-				continue;
-			// bible
-			} elseif($trigger == '!kjv' || $trigger == '!kj'){
-				echo "!kjv called\n";
-				$args=str_replace('–','-',$args);
-				$tmp=curlget([
-					CURLOPT_URL=>"https://bibles.org/v2/search.js?query=".urlencode($args)."&version=eng-KJV",
-					CURLOPT_USERPWD=>"$bible_key:X"
-				]);
-				print_r($tmp);
-				$tmp=json_decode($tmp);
-				print_r($tmp);
-				if(!empty($tmp->response->search->result->passages[0]->text)){
-					$tmp=preg_replace('#(<sup.*?>).*?(</sup>)#',' ',$tmp->response->search->result->passages[0]->text);
-					foreach(["\r","\n","\t"] as $i) $tmp=str_replace($i,' ',$tmp);
-					foreach([1,2,3,4,5] as $i) $tmp=preg_replace("#(<h$i.*?>).*?(</h$i>)#",'',$tmp);
-					$tmp=str_replace('</span>','</span> ',$tmp);
-					$tmp=trim(strip_tags($tmp));
-					$tmp=preg_replace('!\s+!',' ',$tmp);
-					foreach([',',':',';','.'] as $i) $tmp=str_replace(" $i",$i,$tmp);
-					send("PRIVMSG $privto :\"$tmp\"\n");
-				} elseif(!empty($tmp)) send("PRIVMSG $privto :Verse not found.\n");
-				else send("PRIVMSG $privto :Bible API error.\n");
 				continue;
 			}// OMDB, check for movie or series only (no episode or game)
 			elseif($trigger == '!m'){
