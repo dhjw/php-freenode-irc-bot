@@ -169,7 +169,7 @@ while(1){
 		$code=$ex[1];
 		$incnick=substr($ex[0],1,strpos($ex[0],'!')-1);
 		echo $data;
-		
+
 		// custom loop functions
 		foreach($custom_loop_functions as $f) if($f()==2) continue(2);
 
@@ -537,7 +537,7 @@ while(1){
 				}
 			}
 		}
-		
+
 		// global triggers
 		if(substr($trigger,0,1)=='!' && !$disable_triggers){
 			if($ex[2]==$nick) $privto=$incnick; else $privto=$channel; // allow PM response
@@ -881,7 +881,7 @@ while(1){
 				continue;
 			}
 		}
-		
+
 		// URL Titles
 		if($ex[1]=='PRIVMSG' && $ex[2]==$channel && !isme() && !$disable_titles){
 			#mb_internal_encoding("UTF-8");
@@ -937,7 +937,7 @@ while(1){
 							} else echo "imgur image not found or api fail\n";
 							continue(2);
 						}
-	
+
 						// youtube
 						if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
 							if(strpos($u,'/youtu.be/')!==false) $v=substr($purl['path'],1);
@@ -1044,7 +1044,7 @@ while(1){
 							$u="https://old.reddit.com{$m[1]}";
 							$header=["Cookie: _options={%22pref_quarantine_optin%22:true}"];
 						}
-						
+
 						// imdb
 						if(strstr($u,'imdb.com/title/tt')!==false){
 							$tmp=rtrim($purl['path'],'/');
@@ -1066,7 +1066,7 @@ while(1){
 								continue(2);
 							}
 						}
-						
+
 						// outline.com
 						if(preg_match('#(?:https://)?outline\.com/([a-zA-Z0-9]*)(?:$|\?)#',$u,$m)){
 							echo "outline.com url detected\n";
@@ -1085,13 +1085,13 @@ while(1){
 								}
 							}
 						}
-						
+
 						// skips
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
-						
+
 						if(!isset($header)) $header=[];
-						
+
 						if(!empty($tor_enabled) && (substr($purl['host'],-6)=='.onion' || !empty($tor_all))){
 							echo "getting url title via tor\n";
 							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>20,CURLOPT_TIMEOUT=>20,CURLOPT_HTTPHEADER=>$header]);
@@ -1174,7 +1174,7 @@ while(1){
 				$msg=trim($msg);
 				$flood_lines[] = [$tmphost,$msg,microtime()];
 				if(count($flood_lines)>$flood_max_buffer_size) $tmp = array_shift($flood_lines);
-				
+
 				// if X consequtive lines by one person, quiet for X secs
 				if(count($flood_lines)>=$flood_max_conseq_lines){
 					$flooding=true;
@@ -1189,7 +1189,7 @@ while(1){
 					}
 				}
 				// todo: if X within X micro seconds, quiet
-				
+
 				// if X of the same lines in a row by one person, quiet for 15 mins
 				if(count($flood_lines)>=$flood_max_dupe_lines){
 					$flooding=true;
@@ -1207,7 +1207,7 @@ while(1){
 
 			}
 		}
-		
+
 		#echo "DATA=$data msg=$msg ex=".print_r($ex,true)."\n";
 		if(timedout() || empty($data) || ($ex[1]=='NOTICE' && strstr($data,":Server Terminating. Received SIGTERM")!==false) || (isme() && $ex[1]=='QUIT' && strstr($data,":Ping timeout")!==false)){ $connect=1; break; }
 	}
@@ -1752,7 +1752,7 @@ function register_loop_function($f){
 	global $custom_loop_functions;
 	if(!isset($custom_loop_functions)) $custom_loop_functions=[];
 	if(!in_array($f,$custom_loop_functions)){
-		echo "adding custom loop function \"$f\"\n";
+		echo "Adding custom loop function \"$f\"\n";
 		$custom_loop_functions[]=$f;
-	} else echo "skipping duplicate custom loop function \"$f\"\n";
+	} else echo "Skipping duplicate custom loop function \"$f\"\n";
 }
