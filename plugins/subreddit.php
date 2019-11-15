@@ -38,11 +38,11 @@ $plugin_subreddit_options=[
 if(!extension_loaded('sqlite3')) exit("Install the PHP SQLite3 extension, e.g. with sudo apt-get install php7.x-sqlite3\n");
 
 // open and automatically create sqlite database in current folder if doesn't exist
-$plugin_subreddit_db=new SQLite3(dirname(__FILE__).'/subreddit.db');
+$plugin_subreddit_db=new SQLite3(dirname(__FILE__).'/'.basename(__FILE__,'.php')."-{$argv[1]}.db");
 $plugin_subreddit_db->busyTimeout(0);
 $r=$plugin_subreddit_db->querySingle("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='data';");
 if($r==0){
-	echo "Creating ".dirname(__FILE__)."/subreddit.db database file\n";
+	echo "Creating database file ".dirname(__FILE__).'/'.basename(__FILE__,'.php')."-{$argv[1]}.db\n";
 	$plugin_subreddit_db->query("CREATE TABLE data ( subreddit varchar(21) NOT NULL, post_id varchar(9) NOT NULL, time varchar(12) NOT NULL );");
 	$plugin_subreddit_db->query("CREATE INDEX subreddit on data(subreddit);");
 	$plugin_subreddit_db->query("CREATE UNIQUE INDEX post_id on data(post_id);");
@@ -123,6 +123,14 @@ function plugin_subreddit($trigger=false){
 					if($r==0){
 						$d->data->url=html_entity_decode($d->data->url);
 						$d->data->title=html_entity_decode($d->data->title);
+						// strip utm_* query vars, purl & pstr also used later
+						$purl=parse_url($d->data->url);
+						if(!empty($purl['query'])){
+							parse_str($purl['query'],$pstr);
+							foreach($pstr as $k=>$v) if(substr($k,0,4)=='utm_') unset($pstr[$k]);
+							$q=http_build_query($pstr);
+							$d->data->url=$purl['scheme'].'://'.$purl['host'].$purl['path'].(!empty($q)?'?'.$q:'');
+						}
 						$url='';
 						if(empty($link_target)) $url="https://redd.it/$id";
 						else {
@@ -131,8 +139,13 @@ function plugin_subreddit($trigger=false){
 							if($d->data->permalink==str_replace('https://www.reddit.com','',$d->data->url)) $url="https://redd.it/$id";
 							elseif(preg_match("#^https://.*\.reddit\.com/r/[^/]*/comments/([^/]*)/[^/]*/$#U",$d->data->url,$m)) $url="https://redd.it/$m[1]";
 							elseif(preg_match("#^https://.*\.reddit\.com/r/[^/]*/comments/([^/]*)/[^/]*/([^/]*)/#U",$d->data->url,$m)) $url="https://www.reddit.com/comments/$m[1]/_/$m[2]";
-							elseif(strpos($d->data->url,'//www.youtube.com/')!==false || strpos($d->data->url,'//youtube.com/')!==false) $url=str_replace('&feature=youtu.be','',str_replace(['www.youtube.com/watch?v=','youtube.com/watch?v='],'youtu.be/',$d->data->url));
-							else {
+							elseif(strpos($d->data->url,'//www.youtube.com/')!==false || strpos($d->data->url,'//youtube.com/')!==false){
+								$url="https://youtu.be/{$pstr['v']}";
+								unset($pstr['v']);
+								unset($pstr['feature']);
+								$q=http_build_query($pstr);
+								$url.=!empty($q)?'?'.$q:'';
+							} else {
 								// check if a blacklisted sub
 								if(!empty($never_link)) foreach($never_link as $s) if(preg_match("#^https://.*\.reddit\.com/r/$s/.*#",$d->data->url)) $url="https://redd.it/$id";
 								if(empty($url)){
