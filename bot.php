@@ -33,7 +33,6 @@ if(!empty($omdb_key)) $helptxt.=" !m <query or IMDb id e.g. tt123456> - search O
 if(!empty($currencylayer_key)) $helptxt.=" !cc <amount> <from_currency> <to_currency> - currency converter\n";
 if(!empty($wolfram_appid)) $helptxt.=" !wa <query> - query Wolfram Alpha\n";
 $helptxt.=" !ud <term> [definition #] - query Urban Dictionary with optional definition number\n";
-if(!empty($geo_key)) $helptxt.=" !geo <host or IP> - get geolocation of host or IP\n";
 if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages. see http://bit.ly/iso639-1\n";
 $helptxt.=" !flip - flip a coin (call heads or tails first!)
  !8 or !8ball - magic 8-ball\n";
@@ -604,34 +603,6 @@ while(1){
 				if(empty($args)) continue;
 				if($trigger=='!ddi' || $trigger=='!di') $tmp="&iax=1&ia=images"; else $tmp='';
 				send("PRIVMSG $privto :https://duckduckgo.com/?q=".urlencode($args)."$tmp\n");
-				continue;
-			} elseif($trigger == '!geo' || $trigger == '!geoip'){
-				// GeoIP lookup
-				if(empty($args) || strpos($args,' ')!==false) continue;
-				ini_set('default_socket_timeout', 12);
-				$args=gethostbyname($args);
-				echo "ip=$args\n";
-				if(!filter_var($args, FILTER_VALIDATE_IP)){
-					send("PRIVMSG $privto :Invalid IP or lookup failed.\n");
-					continue;
-				}
-				if(!filter_var($args, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)){
-					send("PRIVMSG $privto :You're right where you are.\n");
-					continue;
-				}
-				$result=file_get_contents("http://api.ipinfodb.com/v3/ip-city/?key=$geo_key&ip=".urlencode($args));
-				echo "result=$result\n";
-				list($status,$null,$ip,$cc,$country,$state,$city,$zip,$loc1,$loc2)=explode(';',$result);
-				$out=[];
-				if(!empty($city)) $out[]=$city;
-				if(!empty($state)) $out[]=$state;
-				if(!empty($country)) $out[]=$country;
-				if(empty($result) || $status<>'OK' || $country=='-'){
-					send("PRIVMSG $privto :Error retrieving location.\n");
-					continue;
-				}
-				if(!empty($loc1) && !empty($loc2)) $tmp2=" (".make_bitly_url("https://www.google.com/maps?q=$loc1+$loc2").")"; else $tmp2='';
-				send("PRIVMSG $privto :Location: ".implode(', ',$out).$tmp2."\n");
 				continue;
 			} elseif($trigger == '!yt'){
 				if(empty($args)){
