@@ -7,7 +7,7 @@ error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 if(empty($argv[1])) exit("Usage: ./bot.php <instance> [test mode]\nnote: settings-<instance>.php must exist\n");
 if(!include("./settings-{$argv[1]}.php")) exit("./settings-{$argv[1]}.php not found. Create it.\n");
 
-if(empty($user_agent)) $user_agent='Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36';
+if(empty($user_agent)) $user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
 $num_file_get_retries=2;
 
 // test mode
