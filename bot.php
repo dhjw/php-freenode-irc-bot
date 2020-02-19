@@ -128,7 +128,7 @@ while(1){
 					if(strpos($data,'CAP * LS')!==false && strpos($data,'sasl')!==false) send("CAP REQ :multi-prefix sasl\n");
 					if(strpos($data,'CAP * ACK')!==false) send("AUTHENTICATE PLAIN\n");
 					if(strpos($data,'AUTHENTICATE +')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
-					if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
+					// if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
 					if(strpos($data,'SASL authentication successful')!==false){ send("CAP END\n"); break; }
 					if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR authenticating with SASL, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 				}
@@ -138,24 +138,30 @@ while(1){
 			if(!empty($pass)) send("PASS $pass\n");
 			send("CAP REQ account-notify\n");
 			send("CAP REQ extended-join\n");
+			send("CAP END\n");
 			// set up and wait til end of motd
 			while($data=fgets($socket)){
 				echo $data;
 				$ex=explode(' ',trim($data));
+				if($ex[0] == "PING"){
+					send( "PONG ".rtrim($ex[1])."\n");
+					continue;
+				}
 				if($ex[1]=='433'){
 					echo "Nick in use.. changing and reconnecting\n";
 					$nick=$orignick.$altchars[rand(0,count($altchars)-1)];
 					continue(2);
 				}
-				if($ex[1]=='376') break; // end
+				if($ex[1]=='376'||$ex[1]=='422') break; // end
 				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 			}
+
 			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)){
 				echo "Authenticating with Nickserv\n";
 				send("PRIVMSG NickServ :IDENTIFY $user $pass\n");
 				sleep(2); // helps ensure cloak is applied on join
 			}
-			if(empty($botmask)) send("WHOIS $nick\n"); // non-sasl botmask detection
+			send("WHOIS $nick\n"); // botmask detection
 			sleep(1);
 			send("JOIN $channel\n");
 			$connect=false;
