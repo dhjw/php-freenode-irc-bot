@@ -1350,8 +1350,21 @@ function make_bitly_url($url){
 		echo "Error: Can't make bitly URL. Get a token at https://bitly.com and add it to the settings file.\n";
 		return $url;
 	}
-	$url = trim(file_get_contents('https://api-ssl.bitly.com/v3/shorten?access_token='.$bitly_token.'&longUrl='.urlencode($url).'&format=txt'));
-	return $url;
+	$r=json_decode(curlget([
+		CURLOPT_URL=>'https://api-ssl.bitly.com/v4/shorten',
+		CURLOPT_CUSTOMREQUEST=>'POST',
+		CURLOPT_POSTFIELDS=>json_encode(['long_url'=>$url]),
+		CURLOPT_HTTPHEADER=>[
+			'Authorization: Bearer '.$bitly_token,
+			'Content-Type: application/json',
+			'Accept: application/json'
+		]
+	]));
+	if(!isset($r->id)||empty($r->id)){
+		echo 'Bitly error. Response: '.print_r($r,true);
+		return $url;
+	}
+	return 'https://'.$r->id;
 }
 
 function dorestart($msg,$sendquit=true){
