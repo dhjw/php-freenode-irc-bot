@@ -882,13 +882,19 @@ while(1){
 						// print_r($purl);
 
 						// imgur titles by api
-						if(strpos($u,'//i.imgur.com/')!==false){
+						if(strpos($u,'//i.imgur.com/')!==false||strpos($u,'//imgur.com/gallery/')!==false){
 							// get the id and use the api
 							echo "getting from imgur api..\n";
 							$tmp=substr($purl['path'],1);
-							$tmp=substr($tmp,0,strrpos($tmp,'.'));
+							if(strpos($u,'//i.imgur.com/')!==false){
+								$tmp=substr($tmp,0,strrpos($tmp,'.'));
+								$tmpurl="https://api.imgur.com/3/image/$tmp";
+							} elseif(strpos($u,'//imgur.com/gallery/')!==false){
+								$tmp=substr($tmp,strrpos($tmp,'/')+1);
+								$tmpurl="https://api.imgur.com/3/album/$tmp";
+							}
 							$tmp=curlget([
-								CURLOPT_URL => "https://api.imgur.com/3/image/$tmp",
+								CURLOPT_URL => $tmpurl,
 								CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
 							]);
 							$tmp=json_decode($tmp);
