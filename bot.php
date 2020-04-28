@@ -872,6 +872,7 @@ while(1){
 			// print_r($urls);
 			if($urls){
 				foreach($urls as $u){
+					if(strpos($u,'//mobile.twitter.com')!==false) $u=str_replace('//mobile.twitter.com','//twitter.com',$u);
 					$u_tries=0;
 					while(1){ // extra loop for retries
 						foreach($ignore_urls as $iu) if(stristr($u,$iu)!==false){ echo "ignored url\n"; continue(3); }
