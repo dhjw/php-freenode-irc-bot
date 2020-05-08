@@ -1055,20 +1055,10 @@ while(1){
 						if(preg_match('#(?:https://)?outline\.com/([a-zA-Z0-9]*)(?:$|\?)#',$u,$m)){
 							echo "outline.com url detected\n";
 							if(!empty($m[1])){
-								$o=curlget([
-									CURLOPT_URL=>"https://outlineapi.com/v4/get_article?id=$m[1]",
-									CURLOPT_HTTPHEADER=>["Referer: ".(substr($m[0],0,8)=='https://'?$m[0]:"https://$m[0]").""]
-								]);
-								$o=json_decode($o);
-								if($o->success==true){
-									$t="[ {$o->data->title} ]";
-									$t=preg_replace('/\R/',' ',$t);
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
-									continue(2);
-								}
-							}
-						}
+								$u="https://outline.com/stat1k/{$m[1]}.html";
+								$outline=true;
+							} else $outline=false;
+						} else $outline=false;
 
 						// skips
 						$pathinfo=pathinfo($u);
@@ -1129,6 +1119,10 @@ while(1){
 						foreach($title_replaces as $k=>$v) $title=str_replace($k,$v,$title);
 						# if(!$title) $title = 'No title found.';
 						if(strpos($u,'//twitter.com/')!==false) $title=str_replace_one(' on Twitter: "',': "',$title);
+						if($title && $outline){
+							preg_match("/<span class=\"publication\">.*?>(.*)›.*<\/span>/",$html,$m);
+							if(!empty($m[1])) $title.=' - '.trim($m[1]);
+						}
 						if(strlen($title)>450) $title=substr($title,0,450).'...';
 						if($title){
 							$title="[ $title ]";
