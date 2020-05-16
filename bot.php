@@ -95,6 +95,7 @@ if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty(
 if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
 if(empty($gcloud_translate_max_chars)) $gcloud_translate_max_chars=50000;
+if(empty($skip_dupe_output)) $skip_dupe_output=false;
 $orignick=$nick;
 $lastnick='';
 $last_nick_change=0;
@@ -144,7 +145,7 @@ while(1){
 				echo $data;
 				$ex=explode(' ',trim($data));
 				if($ex[0] == "PING"){
-					send( "PONG ".rtrim($ex[1])."\n");
+					send_no_filter("PONG ".rtrim($ex[1])."\n");
 					continue;
 				}
 				if($ex[1]=='433'){
@@ -262,7 +263,7 @@ while(1){
 		}
 		// ping pong
 		if($ex[0] == "PING"){
-			send( "PONG ".rtrim($ex[1])."\n");
+			send_no_filter("PONG ".rtrim($ex[1])."\n");
 			continue;
 		}
 
@@ -1331,11 +1332,20 @@ function getops(){
 	// wait for ops in main loop
 }
 
+$last_send='';
 function send($a){
-	global $socket, $stream_timeout;
-	echo "> $a";
-	fputs($socket,$a);
-	if(timedout()) return false;
+        global $socket, $stream_timeout, $skip_dupe_output, $last_send;
+        if($skip_dupe_output){ if($a==$last_send) return; else $last_send=$a; }
+        echo "> $a";
+        fputs($socket,"$a");
+        if(timedout()) return false;
+}
+
+function send_no_filter($a){
+        global $socket, $stream_timeout;
+        echo "> $a";
+        fputs($socket,"$a");
+        if(timedout()) return false;
 }
 
 function timedout(){

@@ -73,5 +73,6 @@ $disable_nickserv=false; // note: nickserv not used if sasl enabled
 $disable_help=false;
 $disable_triggers=false;
 $disable_titles=false;
+$skip_dupe_output=false; // avoid repeating lines which can trigger some flood bots
 
 // see readme.md at https://github.com/dhjw/php-freenode-irc-bot for how to use custom triggers, loop processes and plugins
