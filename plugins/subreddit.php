@@ -122,6 +122,11 @@ function plugin_subreddit($trigger=false){
 					$r=$plugin_subreddit_db->querySingle("SELECT COUNT(*) FROM data WHERE post_id = '$id'");
 					if($r==0){
 						$d->data->url=html_entity_decode($d->data->url);
+						// fix relative urls
+						if(!preg_match('@^https?://@',$d->data->url)){
+							if(substr($d->data->url,0,1)=='/') $d->data->url='https://www.reddit.com'.$d->data->url;
+							else $d->data->url='https://www.reddit.com/r/'.$item['subreddit'].'/'.$d->data->url;
+						}
 						$d->data->title=html_entity_decode($d->data->title);
 						// strip utm_* query vars, purl & pstr also used later
 						$purl=parse_url($d->data->url);
