@@ -1095,6 +1095,48 @@ while(1){
 							}
 						}
 
+						// instagram
+						if(preg_match('/https?:\/\/(?:www\.)?instagram\.com\/p\/([A-Za-z0-9-_]*)/',$u,$m)){
+							if(!empty($m[1])){
+								$t='';
+								$r=@json_decode(file_get_contents("https://api.instagram.com/oembed/?url=https://www.instagram.com/p/$m[1]/"));
+								if(!empty($r) && !empty($r->html)){
+									// get author
+									$pos=strpos($r->html,'A post shared by');
+									if($pos!==false){
+										$tmp=substr($r->html,$pos);
+										$tmp=substr($tmp,strpos($tmp,'target="_blank">')+16);
+										preg_match("/(.*?)(?:<\/a>|\(@".preg_quote($r->author_name)."\))/",$tmp,$m);
+										$tmp=trim($m[1]);
+									}
+									// get title
+									if(!empty($r->title)){
+										$tmp2=str_replace(["\r\n","\n","\t"],' ',$r->title);
+										$tmp2=trim(preg_replace('!\s+!',' ',$tmp2));
+										if(mb_strlen($tmp2)>320){
+											$tmp2=mb_substr($tmp2,0,320);
+											$tmp2=mb_substr($tmp2,0,mb_strrpos($tmp2,' ')+1); // cut to last whole word
+											$tmp2=rtrim($tmp2," ;.,"); // trim trailing punctuation
+											$tmp2.=' ...';
+										}
+										$t="[ $tmp: $tmp2 ]";
+									} else {
+										// no title, create default so dont have to do another request
+										preg_match('/datetime="(.*?)"/',$r->html,$m);
+										if(!empty($m[1])){
+											$tmp2=gmdate("M j, Y \a\\t g:ia \U\T\C",strtotime($m[1]));
+											$t="[ Post by $tmp • $tmp2 ]";
+										}
+									}
+									if(!empty($t)){
+										if($title_bold) $t="\x02$t\x02";
+										send("PRIVMSG $channel :$t\n");
+										continue(2);
+									}
+								}
+							}
+						}
+
 						// skips
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
