@@ -1061,6 +1061,40 @@ while(1){
 							} else $outline=false;
 						} else $outline=false;
 
+						// twitter via API (https://stackoverflow.com/a/12939923)
+						if(!empty($twitter_consumer_key) && preg_match('/^https?:\/\/twitter\.com\/(?:#!\/)?(?:\w+)\/status(?:es)?\/(\d+)/',$u,$m)){
+							if(!empty($m[1])){
+								// init params
+								$params=['oauth_consumer_key'=>$twitter_consumer_key,'oauth_nonce'=>uniqid('',true),'oauth_signature_method'=>'HMAC-SHA1','oauth_token'=>$twitter_access_token,'oauth_timestamp'=>time(),'oauth_version'=>'1.0','id'=>$m[1],'tweet_mode'=>'extended'];
+								// build base string
+								$tmp=[];
+								ksort($params);
+								foreach($params as $k=>$v) $tmp[]="$k=".rawurlencode($v);
+								$base_info='GET&'.rawurlencode('https://api.twitter.com/1.1/statuses/show.json').'&'.rawurlencode(implode('&',$tmp));
+								// sign
+								$composite_key=rawurlencode($twitter_consumer_secret).'&'.rawurlencode($twitter_access_token_secret);
+								$oauth_signature=base64_encode(hash_hmac('sha1',$base_info,$composite_key,true));
+								$params['oauth_signature']=$oauth_signature;
+								// build header
+								$tmp='Authorization: OAuth ';
+								$tmp2=[];
+								foreach($params as $k=>$v) $tmp2[]="$k=\"".rawurlencode($v)."\"";
+								$tmp.=implode(', ',$tmp2);
+								$header=[$tmp];
+								// request
+								$r=@json_decode(curlget([CURLOPT_URL=>"https://api.twitter.com/1.1/statuses/show.json?id=$m[1]&tweet_mode=extended",CURLOPT_HTTPHEADER=>$header]));
+								if(!empty($r) && !empty($r->full_text) && !empty($r->user->name)){
+									$t=str_replace(["\r\n","\n","\t"],' ',$r->full_text);
+									$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
+									$t=trim(preg_replace('!\s+!',' ',$t));
+									$t="[ {$r->user->name}: $t ]";
+									if($title_bold) $t="\x02$t\x02";
+									send("PRIVMSG $channel :$t\n");
+								} else send("PRIVMSG $channel :Twitter API error.\n");
+								continue(2);
+							}
+						}
+
 						// skips
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
