@@ -955,7 +955,7 @@ while(1){
 							continue(2);
 						}
 						// wikipedia
-						if(strpos($u,'wikipedia.org/wiki/')!==false && strpos($u,'wikipedia.org/wiki/File:')===false && strpos($u,"/web.archive.org/")===false){
+						if(strpos($u,'wikipedia.org/wiki/')!==false && strpos($u,'wikipedia.org/wiki/File:')===false && strpos($u,'wikipedia.org/wiki/Category:')===false && strpos($u,"/web.archive.org/")===false){
 							$e=get_wiki_extract(substr($u,strpos($u,'/wiki/')+6),320);
 							if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
 							continue(2);
