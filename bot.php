@@ -815,15 +815,11 @@ while(1){
 				$d=trim(preg_replace("/\s+/",' ',str_replace(["[","]"],'',$d)));
 				$d=str_replace(' .','.',$d);
 				$d=str_replace(' ,',',',$d);
-				if(mb_strlen($d)>360){
-					$d=trim(mb_substr($d,0,360));
-					$d=mb_substr($d,0,mb_strrpos($d,' ')+1);
-					$d=rtrim($d," ;.,");
-					$o="\"$d ...\"";
-				} else $o="\"$d\"";
-				if(strtolower($r->list[$num]->word)<>strtolower($q)) $o="({$r->list[$num]->word}) $o";
-				$o.=' '.make_bitly_url($r->list[0]->permalink);
-				send("PRIVMSG $privto :$o\n");
+				$d=str_shorten($d,360);
+				$d="\"$d\"";
+				if(strtolower($r->list[$num]->word)<>strtolower($q)) $d="({$r->list[$num]->word}) $d";
+				$d.=' '.make_bitly_url($r->list[0]->permalink);
+				send("PRIVMSG $privto :$d\n");
 			} elseif($trigger == '!flip'){
 				$tmp=get_true_random(0,1);
 				if($tmp==0) $tmp='heads'; else $tmp='tails';
@@ -911,6 +907,7 @@ while(1){
 									$tmpd=str_replace(["\r","\n","\t"],' ',$tmpd);
 									$tmpd=preg_replace('!\s+!',' ',$tmpd);
 									$tmpd=trim(strip_tags($tmpd));
+									$tmpd=str_shorten($tmpd,280);
 									$out.=$tmpd;
 								}
 								if(!empty($out)){
@@ -1113,12 +1110,7 @@ while(1){
 									if(!empty($r->title)){
 										$tmp2=str_replace(["\r\n","\n","\t"],' ',$r->title);
 										$tmp2=trim(preg_replace('!\s+!',' ',$tmp2));
-										if(mb_strlen($tmp2)>320){
-											$tmp2=mb_substr($tmp2,0,320);
-											$tmp2=mb_substr($tmp2,0,mb_strrpos($tmp2,' ')+1); // cut to last whole word
-											$tmp2=rtrim($tmp2," ;.,"); // trim trailing punctuation
-											$tmp2.=' ...';
-										}
+										$tmp2=str_shorten($tmp2,280);
 										$t="[ $tmp: $tmp2 ]";
 									} else {
 										// no title, create default so dont have to do another request
@@ -1200,7 +1192,7 @@ while(1){
 							preg_match("/<span class=\"publication\">.*?>(.*)›.*<\/span>/",$html,$m);
 							if(!empty($m[1])) $title.=' - '.trim($m[1]);
 						}
-						if(strlen($title)>450) $title=substr($title,0,450).'...';
+						$title=str_shorten($title,438);
 						if($title){
 							$title="[ $title ]";
 							if($title_bold) $title="\x02$title\x02";
@@ -1650,12 +1642,7 @@ function format_extract($e,$len=280,$opts=[]){
 	$e=preg_replace_callback("/(&#[0-9]+;)/", function($m){ return mb_convert_encoding($m[1],'UTF-8','HTML-ENTITIES'); },$e);
 	$e=strip_tags($e);
 	$e=preg_replace('/\s+/m', ' ', $e);
-	if(mb_strlen($e)>$len){
-		$e=mb_substr($e,0,$len);
-		$e=mb_substr($e,0,mb_strrpos($e,' ')+1); // cut to last whole word
-		$e=rtrim($e," ;.,"); // trim trailing punctuation from last word
-		$e.=' ...';
-	}
+	$e=str_shorten($e,$len);
 	if(!isset($opts['keep_quotes'])) $e=trim(trim($e,'"')); // remove outside quotes because we wrap in quotes
 	return $e;
 }
@@ -1823,6 +1810,16 @@ function str_replace_one($needle,$replace,$haystack){
 	$pos=strpos($haystack,$needle);
 	if($pos!==false) $newstring=substr_replace($haystack,$replace,$pos,strlen($needle)); else $newstring=$haystack;
 	return $newstring;
+}
+
+function str_shorten($s,$len){
+	if(mb_strlen($s)>$len){
+		$s=mb_substr($s,0,$len);
+		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last whole word
+		$s=rtrim($s," ;.,"); // trim trailing punctuation
+		$s.=" ...";
+	}
+	return $s;
 }
 
 function register_loop_function($f){
