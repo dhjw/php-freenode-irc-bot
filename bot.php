@@ -951,12 +951,50 @@ while(1){
 							send("PRIVMSG $channel :$title\n");
 							continue(2);
 						}
+
 						// wikipedia
-						if(strpos($u,'wikipedia.org/wiki/')!==false && strpos($u,'wikipedia.org/wiki/File:')===false && strpos($u,'wikipedia.org/wiki/Category:')===false && strpos($u,"/web.archive.org/")===false){
-							$e=get_wiki_extract(substr($u,strpos($u,'/wiki/')+6),320);
-							if(!empty($e)) send( "PRIVMSG $channel :\"$e\"\n"); else send( "PRIVMSG $channel :Wiki extract not found.\n");
-							continue(2);
+						if(preg_match("/^(?:https?:\/\/(?:.*?\.)?wikipedia\.org\/wiki\/(.*)|https?:\/\/upload\.wikimedia\.org)/",$u,$m)){
+							// handle file urls whether on upload.wikimedia.org thumb or full, direct or url hash
+							$f='';
+							if(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/thumb\/.*\/(.*)\/.*/",$u,$m2)) $f=$m2[1];
+							elseif(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/.*\/(.*\.(?:\w){3})/",$u,$m2)) $f=$m2[1];
+							elseif(preg_match("/^https?:\/\/(?:.*?\.)?wikipedia\.org\/wiki\/File:(.*)/",$u,$m2)) $f=$m2[1];
+							elseif(preg_match("/^https?:\/\/(?:.*?\.)?wikipedia\.org\/wiki\/[^#]*(?:#\/media\/File:(.*))/",$u,$m2)) $f=$m2[1];
+							if(!empty($f)){
+								if(strpos($f,'%')!==false) $f=urldecode($f);
+								echo "wikipedia media file: $f\n";
+								$r=curlget([CURLOPT_URL=>'https://en.wikipedia.org/w/api.php?action=query&format=json&prop=imageinfo&titles=File:'.urlencode($f).'&iiprop=extmetadata']);
+								$r=json_decode($r,true);
+								if(!empty($r) && !empty($r['query']) && !empty($r['query']['pages'])){
+									// not sure a file can have more than one desc/page, so just grab first one
+									$k=array_keys($r['query']['pages']);
+									if(!empty($r['query']['pages'][$k[0]])){
+										$e=$r['query']['pages'][$k[0]]['imageinfo'][0]['extmetadata']['ImageDescription']['value'];
+										$e=strip_tags($e);
+										$e=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$e); // nbsp
+										$e=preg_replace('!\s+!',' ',$e);
+										$e=trim($e);
+										$e=str_shorten($e,280);
+									}
+									if(!empty($e)){
+										$e="[ $e ]";
+										if($title_bold) $e="\x02$e\x02";
+										send( "PRIVMSG $channel :$e\n");
+										continue(2);
+									}
+								}
+							} elseif(!empty($m[1])){ // not a file, not upload.wikimedia.org, has /wiki/.*
+								if(!preg_match("/^Category:/",$m[1])){
+									$e=get_wiki_extract($m[1],320);
+									// no bolding
+									if(!empty($e)){
+										send( "PRIVMSG $channel :\"$e\"\n"); // else send( "PRIVMSG $channel :Wiki
+										continue(2);
+									}
+								}
+							}
 						}
+
 						// reddit image
 						if(strpos($u,'.redd.it/')!==false){
 							echo "getting reddit image title\n";
@@ -1178,11 +1216,10 @@ while(1){
 						$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 						# strip numeric entities that don't seem to display right on IRC when converted
 						$title=preg_replace("/(&#[0-9]+;)/",'', $title);
-						$notitlehosts=['wikipedia.org'];
+						// $notitlehosts=['wikipedia.org'];
 						$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet'];
 						foreach($notitlehosts as $nth) if(strpos($purl['host'],$nth)!==false && strpos($purl['path'],'/wiki/')!==false){ echo "string $nth found in URL $u. SKIPPING/IGNORING\n"; continue(3); }
-						foreach(["\r\n","\n","\t"] as $s) str_replace($s,' ',$title);
-						# $title=trim(substr(preg_replace('!\s+!', ' ', $title),0,390));
+						$title=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$title);
 						$title=trim(preg_replace('!\s+!', ' ', $title));
 						foreach($notitletitles as $ntt) if($title==$ntt) continue(3);
 						foreach($title_replaces as $k=>$v) $title=str_replace($k,$v,$title);
