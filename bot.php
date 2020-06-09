@@ -1097,14 +1097,14 @@ while(1){
 						} else $outline=false;
 
 						// twitter via API
-						// todo: convert all t.co links to effective_url, like we do with bio url?
 						if(!empty($twitter_consumer_key)){
 							// tweet
 							if(preg_match('/^https?:\/\/twitter\.com\/(?:#!\/)?(?:\w+)\/status(?:es)?\/(\d+)/',$u,$m)){
-								echo "getting tweet via API\n";
+								echo "getting tweet via API.. ";
 								if(!empty($m[1])){
 									$r=twitter_api('/statuses/show.json',['id'=>$m[1],'tweet_mode'=>'extended']);
 									if(!empty($r) && !empty($r->full_text) && !empty($r->user->name)){
+										echo "ok\n";
 										$t=$r->full_text;
 										// replace twitter media URLs that lead back to twitter anyway
 										$mcnt=0;
@@ -1115,19 +1115,12 @@ while(1){
 											$t=str_replace($v->url,' ',$t);
 										}
 										if($mtyp=='photo') $mtyp='image';
-										if($mcnt==1) $t.='('.ucfirst($mtyp).')'; elseif($mcnt>1) $t.="($mcnt {$mtyp}s)";
+										if($mcnt==1) $t.="($mtyp)"; elseif($mcnt>1) $t.="($mcnt {$mtyp}s)";
 										// add a hint for external links
 										foreach($r->entities->urls as $v){
-											preg_match('@https?://([^/#?]*)@',$v->expanded_url,$m);
-											$m[1]=strtolower($m[1]);
-											if(substr_count($m[1],'.')>1){
-												$m[1]=preg_replace('/^www\./',"$1",$m[1]);
-												// strip subdomain from popular TLDs (not all, because of third-level TLDs)
-												if(substr_count($m[1],'.')>1 && preg_match('/(?:\.com|\.net|\.org|\.gov|\.edu|\.mil|\.co\.uk|\.com\.au)$/',$m[1])) $m[1]=preg_replace('/^.*?\./',"$1",$m[1]);
-											}
-											$t=str_replace($v->url,"{$v->url} ({$m[1]})",$t);
+											$h=get_url_hint($v->expanded_url);
+											$t=str_replace($v->url,"{$v->url} ($h)",$t);
 										}
-
 										$t=str_replace(["\r\n","\n","\t"],' ',$t);
 										$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
 										$t=trim(preg_replace('!\s+!',' ',$t));
@@ -1135,26 +1128,44 @@ while(1){
 										$t="[ {$r->user->name}: $t ]";
 										if($title_bold) $t="\x02$t\x02";
 										send("PRIVMSG $channel :$t\n");
-									} else send("PRIVMSG $channel :Twitter API error.\n");
+									} else {
+										echo "failed. result=".print_r($r,true);
+										send("PRIVMSG $channel :Tweet not found.\n");
+									}
 									continue(2); // always abort, won't be a non-tweet URL
 								}
 							// bio
 							} elseif(preg_match("/^https?:\/\/twitter\.com\/(\w*)(?:[\?#].*)?$/",$u,$m)){
-								echo "getting twitter bio via API\n";
+								echo "getting twitter bio via API.. ";
 								if(!empty($m[1])){
 									$r=twitter_api('/users/show.json',['screen_name'=>$m[1]]);
-									if(!empty($r) && !empty($r->description)){
-										$t=str_replace(["\r\n","\n","\t"],' ',$r->description);
-										$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
-										$t=trim(preg_replace('!\s+!',' ',$t));
+									if(!empty($r) && empty($r->errors)){
+										echo "ok\n";
+										$t="{$r->name}";
+										if(!empty($r->description)){
+											$d=$r->description;
+											foreach($r->entities->description->urls as $v){
+												$h=get_url_hint($v->expanded_url);
+												$d=str_replace($v->url,"{$v->url} ($h)",$d);
+											}
+											$d=str_replace(["\r\n","\n","\t"],' ',$d);
+											$d=html_entity_decode($d,ENT_QUOTES | ENT_HTML5,'UTF-8');
+											$d=trim(preg_replace('!\s+!',' ',$d));
+											$t.=" | $d";
+										}
 										if(!empty($r->url)){
-											curlget([CURLOPT_URL=>str_replace('http://t.co/','https://t.co/',$r->url),CURLOPT_NOBODY=>1,CURLOPT_MAXREDIRS=>1]);
-											if(!empty($curl_info['EFFECTIVE_URL'])) $u=preg_replace("/^(https?:\/\/[^\/]*?)\/$/","$1",$curl_info['EFFECTIVE_URL']); // strip trailing slash on domain-only links
-										} else $u='';
-										$t="[ {$r->name} | $t".(!empty($u)?" | $u":'')." ]";
+											$u=$r->entities->url->urls[0]->expanded_url;
+											$u=preg_replace("/^(https?:\/\/[^\/]*?)\/$/","$1",$u); // strip trailing slash on domain-only links
+											$t.=" | $u";
+										}
+										$t="[ $t ]";
 										if($title_bold) $t="\x02$t\x02";
 										send("PRIVMSG $channel :$t\n");
 										continue(2); // only abort if found, else might be a non-profile URL
+									} else {
+										echo "failed. result=".print_r($r,true);
+										// todo: output error and skip on standard url retry using an outside-loop var
+										// send("PRIVMSG $channel :Twitter user not found.\n");
 									}
 								}
 							}
@@ -1511,6 +1522,18 @@ function make_bitly_url($url){
 		return $url;
 	}
 	return 'https://'.$r->id;
+}
+
+function get_url_hint($u){
+	if(preg_match('@https?://([^/#?]*)@',$u,$m)){
+		$m[1]=strtolower($m[1]);
+		if(substr_count($m[1],'.')>1){
+			$m[1]=preg_replace('/^www\./',"$1",$m[1]);
+			// strip subdomain from popular TLDs (not all, because of third-level TLDs)
+			if(substr_count($m[1],'.')>1 && preg_match('/(?:\.com|\.net|\.org|\.gov|\.edu|\.mil|\.co\.uk|\.com\.au)$/',$m[1])) $m[1]=preg_replace('/^.*?\./',"$1",$m[1]);
+		}
+		return $m[1];
+	} else return false;
 }
 
 function dorestart($msg,$sendquit=true){
