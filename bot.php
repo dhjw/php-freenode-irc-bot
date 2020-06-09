@@ -1105,9 +1105,33 @@ while(1){
 								if(!empty($m[1])){
 									$r=twitter_api('/statuses/show.json',['id'=>$m[1],'tweet_mode'=>'extended']);
 									if(!empty($r) && !empty($r->full_text) && !empty($r->user->name)){
-										$t=str_replace(["\r\n","\n","\t"],' ',$r->full_text);
+										$t=$r->full_text;
+										// replace twitter media URLs that lead back to twitter anyway
+										$mcnt=0;
+										$mtyp='';
+										foreach($r->extended_entities->media as $v){
+											$mcnt++;
+											$mtyp=$v->type;
+											$t=str_replace($v->url,' ',$t);
+										}
+										if($mtyp=='photo') $mtyp='image';
+										if($mcnt==1) $t.='('.ucfirst($mtyp).')'; elseif($mcnt>1) $t.="($mcnt {$mtyp}s)";
+										// add a hint for external links
+										foreach($r->entities->urls as $v){
+											preg_match('@https?://([^/#?]*)@',$v->expanded_url,$m);
+											$m[1]=strtolower($m[1]);
+											if(substr_count($m[1],'.')>1){
+												$m[1]=preg_replace('/^www\./',"$1",$m[1]);
+												// strip subdomain from popular TLDs (not all, because of third-level TLDs)
+												if(substr_count($m[1],'.')>1 && preg_match('/(?:\.com|\.net|\.org|\.gov|\.edu|\.mil|\.co\.uk|\.com\.au)$/',$m[1])) $m[1]=preg_replace('/^.*?\./',"$1",$m[1]);
+											}
+											$t=str_replace($v->url,"{$v->url} ({$m[1]})",$t);
+										}
+
+										$t=str_replace(["\r\n","\n","\t"],' ',$t);
 										$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
 										$t=trim(preg_replace('!\s+!',' ',$t));
+										$t=str_shorten($t,438);
 										$t="[ {$r->user->name}: $t ]";
 										if($title_bold) $t="\x02$t\x02";
 										send("PRIVMSG $channel :$t\n");
