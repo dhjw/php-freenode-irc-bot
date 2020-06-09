@@ -1096,37 +1096,43 @@ while(1){
 							} else $outline=false;
 						} else $outline=false;
 
-						// twitter via API (https://stackoverflow.com/a/12939923)
-						if(!empty($twitter_consumer_key) && preg_match('/^https?:\/\/twitter\.com\/(?:#!\/)?(?:\w+)\/status(?:es)?\/(\d+)/',$u,$m)){
-							if(!empty($m[1])){
-								// init params
-								$params=['oauth_consumer_key'=>$twitter_consumer_key,'oauth_nonce'=>uniqid('',true),'oauth_signature_method'=>'HMAC-SHA1','oauth_token'=>$twitter_access_token,'oauth_timestamp'=>time(),'oauth_version'=>'1.0','id'=>$m[1],'tweet_mode'=>'extended'];
-								// build base string
-								$tmp=[];
-								ksort($params);
-								foreach($params as $k=>$v) $tmp[]="$k=".rawurlencode($v);
-								$base_info='GET&'.rawurlencode('https://api.twitter.com/1.1/statuses/show.json').'&'.rawurlencode(implode('&',$tmp));
-								// sign
-								$composite_key=rawurlencode($twitter_consumer_secret).'&'.rawurlencode($twitter_access_token_secret);
-								$oauth_signature=base64_encode(hash_hmac('sha1',$base_info,$composite_key,true));
-								$params['oauth_signature']=$oauth_signature;
-								// build header
-								$tmp='Authorization: OAuth ';
-								$tmp2=[];
-								foreach($params as $k=>$v) $tmp2[]="$k=\"".rawurlencode($v)."\"";
-								$tmp.=implode(', ',$tmp2);
-								$header=[$tmp];
-								// request
-								$r=@json_decode(curlget([CURLOPT_URL=>"https://api.twitter.com/1.1/statuses/show.json?id=$m[1]&tweet_mode=extended",CURLOPT_HTTPHEADER=>$header]));
-								if(!empty($r) && !empty($r->full_text) && !empty($r->user->name)){
-									$t=str_replace(["\r\n","\n","\t"],' ',$r->full_text);
-									$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
-									$t=trim(preg_replace('!\s+!',' ',$t));
-									$t="[ {$r->user->name}: $t ]";
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
-								} else send("PRIVMSG $channel :Twitter API error.\n");
-								continue(2);
+						// twitter via API
+						// todo: convert all t.co links to effective_url, like we do with bio url?
+						if(!empty($twitter_consumer_key)){
+							// tweet
+							if(preg_match('/^https?:\/\/twitter\.com\/(?:#!\/)?(?:\w+)\/status(?:es)?\/(\d+)/',$u,$m)){
+								echo "getting tweet via API\n";
+								if(!empty($m[1])){
+									$r=twitter_api('/statuses/show.json',['id'=>$m[1],'tweet_mode'=>'extended']);
+									if(!empty($r) && !empty($r->full_text) && !empty($r->user->name)){
+										$t=str_replace(["\r\n","\n","\t"],' ',$r->full_text);
+										$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
+										$t=trim(preg_replace('!\s+!',' ',$t));
+										$t="[ {$r->user->name}: $t ]";
+										if($title_bold) $t="\x02$t\x02";
+										send("PRIVMSG $channel :$t\n");
+									} else send("PRIVMSG $channel :Twitter API error.\n");
+									continue(2); // always abort, won't be a non-tweet URL
+								}
+							// bio
+							} elseif(preg_match("/^https?:\/\/twitter\.com\/(\w*)(?:[\?#].*)?$/",$u,$m)){
+								echo "getting twitter bio via API\n";
+								if(!empty($m[1])){
+									$r=twitter_api('/users/show.json',['screen_name'=>$m[1]]);
+									if(!empty($r) && !empty($r->description)){
+										$t=str_replace(["\r\n","\n","\t"],' ',$r->description);
+										$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
+										$t=trim(preg_replace('!\s+!',' ',$t));
+										if(!empty($r->url)){
+											curlget([CURLOPT_URL=>str_replace('http://t.co/','https://t.co/',$r->url),CURLOPT_NOBODY=>1,CURLOPT_MAXREDIRS=>1]);
+											if(!empty($curl_info['EFFECTIVE_URL'])) $u=preg_replace("/^(https?:\/\/[^\/]*?)\/$/","$1",$curl_info['EFFECTIVE_URL']); // strip trailing slash on domain-only links
+										} else $u='';
+										$t="[ {$r->name} | $t".(!empty($u)?" | $u":'')." ]";
+										if($title_bold) $t="\x02$t\x02";
+										send("PRIVMSG $channel :$t\n");
+										continue(2); // only abort if found, else might be a non-profile URL
+									}
+								}
 							}
 						}
 
@@ -1682,6 +1688,33 @@ function format_extract($e,$len=280,$opts=[]){
 	$e=str_shorten($e,$len);
 	if(!isset($opts['keep_quotes'])) $e=trim(trim($e,'"')); // remove outside quotes because we wrap in quotes
 	return $e;
+}
+
+function twitter_api($u,$op){ // https://stackoverflow.com/a/12939923
+	global $twitter_consumer_key,$twitter_consumer_secret,$twitter_access_token,$twitter_access_token_secret;
+	// init params
+	$u="https://api.twitter.com/1.1$u";
+	$p=array_merge(['oauth_consumer_key'=>$twitter_consumer_key,'oauth_nonce'=>uniqid('',true),'oauth_signature_method'=>'HMAC-SHA1','oauth_token'=>$twitter_access_token,'oauth_timestamp'=>time(),'oauth_version'=>'1.0'],$op);
+	// build base string
+	$t=[];
+	ksort($p);
+	foreach($p as $k=>$v) $t[]="$k=".rawurlencode($v);
+	$b='GET&'.rawurlencode($u).'&'.rawurlencode(implode('&',$t));
+	// sign
+	$k=rawurlencode($twitter_consumer_secret).'&'.rawurlencode($twitter_access_token_secret);
+	$s=base64_encode(hash_hmac('sha1',$b,$k,true));
+	$p['oauth_signature']=$s;
+	// build header
+	$t='Authorization: OAuth ';
+	$t2=[];
+	foreach($p as $k=>$v) $t2[]="$k=\"".rawurlencode($v)."\"";
+	$t.=implode(', ',$t2);
+	$h=[$t];
+	// request
+	$t=[];
+	foreach($op as $k=>$v) $t[]="$k=".rawurlencode($v);
+	$r=@json_decode(curlget([CURLOPT_URL=>"$u?".implode('&',$t),CURLOPT_HTTPHEADER=>$h]));
+	return $r;
 }
 
 function get_true_random($min = 1, $max = 100, $num = 1) {
