@@ -41,7 +41,7 @@ $title_replaces=[
 	gethostbyaddr($connect_ip)=>'example.com'
 ];
 
-// nicks to ignore urls from
+// nicks to ignore. also matches up to one additional non-alpha character
 $ignore_nicks=[
 	// 'otherbot'
 ];

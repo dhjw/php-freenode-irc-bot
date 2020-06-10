@@ -231,9 +231,12 @@ while(1){
 			$check_lock=false;
 		}
 
-		if(isset($ignore_nicks)&&is_array($ignore_nicks)&&!empty($incnick)) foreach($ignore_nicks as $ign){
-			$ign=preg_quote($ign).'.*';
-			if(preg_match("/$ign/",$incnick)){ echo "ignoring $incnick\n"; continue(2); }
+		// ignore specified nicks with up to one non-alpha char
+		if(isset($ignore_nicks) && is_array($ignore_nicks) && !empty($incnick)) foreach($ignore_nicks as $n){
+			if(preg_match("/^".preg_quote($n)."[^a-zA-Z]?$/",$incnick)){
+				echo "ignoring $incnick\n";
+				continue(2);
+			}
 		}
 
 		// get botmask from WHOIS on connect
