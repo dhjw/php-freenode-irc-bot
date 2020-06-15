@@ -144,7 +144,7 @@ function plugin_subreddit($trigger=false){
 							if($d->data->permalink==str_replace('https://www.reddit.com','',$d->data->url)) $url="https://redd.it/$id";
 							elseif(preg_match("#^https://.*\.reddit\.com/r/[^/]*/comments/([^/]*)/[^/]*/$#U",$d->data->url,$m)) $url="https://redd.it/$m[1]";
 							elseif(preg_match("#^https://.*\.reddit\.com/r/[^/]*/comments/([^/]*)/[^/]*/([^/]*)/#U",$d->data->url,$m)) $url="https://www.reddit.com/comments/$m[1]/_/$m[2]";
-							elseif(strpos($d->data->url,'//www.youtube.com/')!==false || strpos($d->data->url,'//youtube.com/')!==false){
+							elseif(preg_match("#^https?://(?:www\.)?youtube\.com/watch#",$d->data->url)){
 								$url="https://youtu.be/{$pstr['v']}";
 								unset($pstr['v']);
 								unset($pstr['feature']);
