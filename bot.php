@@ -107,6 +107,7 @@ $check_lock=false;
 $lasttime=0;
 $users=[]; // user state data (nick, ident, host)
 $flood_lines=[];
+$base_msg_len=60;
 if(!isset($custom_loop_functions)) $custom_loop_functions=[];
 
 while(1){
@@ -244,6 +245,7 @@ while(1){
 			if($ex[2]==$nick){
 				$botmask=$ex[5];
 				echo "botmask=$botmask\n";
+				$base_msg_len=strlen(":$nick!~$ident@$botmask PRIVMSG  :\r\n");
 			}
 		}
 		// recover main nick
@@ -262,6 +264,7 @@ while(1){
 			$botdata->nick=$nick;
 			file_put_contents($datafile,json_encode($botdata));
 			send("PRIVMSG NickServ GROUP\n");
+			$base_msg_len=strlen(":$nick!~$ident@$botmask PRIVMSG  :\r\n");
 			continue;
 		}
 		// ping pong
@@ -344,6 +347,7 @@ while(1){
 		$trigger = strtolower(trim($trigger[1]));
 		$args = trim(implode(' ',array_slice($ex,4)));
 		if($ex[2]==$nick) $privto=$incnick; else $privto=$channel; // allow PM response
+		$baselen=$base_msg_len+strlen($privto);
 
 		// admin triggers
 		if(substr($trigger,0,1)=='!' && isadmin()){
@@ -1970,13 +1974,22 @@ function str_replace_one($needle,$replace,$haystack){
 	return $newstring;
 }
 
+// shorten string to last whole word within x characters and max bytes
 function str_shorten($s,$len){
-	if(mb_strlen($s)>$len){
+	global $baselen;
+	$e=false;
+	if(mb_strlen($s)>$len){ // desired max chars
 		$s=mb_substr($s,0,$len);
-		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last whole word
-		$s=rtrim($s," ;.,"); // trim trailing punctuation
-		$s.=" ...";
+		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
+		$e=true;
 	}
+	$m=502-$baselen; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings
+	if(strlen($s)>$m){
+		$s=mb_strcut($s,0,$m); // mb-safe cut to bytes
+		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
+		$e=true;
+	}
+	if($e) $s=rtrim($s,' ;.,').' ...';  // trim punc & add ellipses
 	return $s;
 }
 
