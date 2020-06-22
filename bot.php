@@ -1527,16 +1527,54 @@ function make_bitly_url($url){
 	return 'https://'.$r->id;
 }
 
+// get url hint e.g. https://one.microsoft.com -> microsoft.com, https://www.telegraph.co.uk -> telegraph.co.uk
 function get_url_hint($u){
-	if(preg_match('@https?://([^/#?]*)@',$u,$m)){
-		$m[1]=strtolower($m[1]);
-		if(substr_count($m[1],'.')>1){
-			$m[1]=preg_replace('/^www\./',"$1",$m[1]);
-			// strip subdomain from popular TLDs (not all, because of third-level TLDs)
-			if(substr_count($m[1],'.')>1 && preg_match('/(?:\.com|\.net|\.org|\.gov|\.edu|\.mil|\.co\.uk|\.com\.au)$/',$m[1])) $m[1]=preg_replace('/^.*?\./',"$1",$m[1]);
+	if(preg_match('@https?://([^/#?]*)@',$u,$m)) return get_base_domain($m[1]);
+	else return false; // shouldnt happen as we always pass urls
+}
+
+// get base domain considering public suffix from https://publicsuffix.org/list/
+function get_base_domain($d){
+	global $public_suffixes;
+	$d=strtolower($d);
+	if(empty($public_suffixes)){
+		// todo: refresh like once a month on bot start, if exists; until then delete public_suffix_list.dat and restart bot
+		if(!file_exists('public_suffix_list.dat')){
+			echo "Updating public_suffix_list.dat\n";
+			$f=file_get_contents('https://publicsuffix.org/list/public_suffix_list.dat');
+			if(!empty($f)){
+				file_put_contents('public_suffix_list.dat',$f) or die('Error writing file, check permissions.');
+				$fp=fopen('public_suffix_list.dat','r');
+				$f="// Source: https://publicsuffix.org/list/ (modified) License: https://mozilla.org/MPL/2.0/\n";
+				while(!feof($fp)){
+					$l=fgets($fp,1024);
+					if(substr($l,0,2)=='//'||$l=="\n") continue;
+					elseif(substr($l,0,2)=='*.') $l=substr($l,2);
+					elseif(substr($l,0,1)=='!') $l=substr($l,1);
+					$f.=$l;
+				}
+				fclose($fp);
+				file_put_contents('public_suffix_list.dat',$f);
+				unset($f);
+			} else {
+				echo "Error downloading public_suffix_list.dat\n";
+				return $d;
+			}
 		}
-		return $m[1];
-	} else return false;
+		$public_suffixes=explode("\n",file_get_contents('public_suffix_list.dat')); // store in memory (fastest)
+	}
+	$l=substr($d,0,strpos($d,'.')); // save last stripped sub/dom
+	$c=substr($d,strpos($d,'.')+1); // strip first sub/dom to save an iteration
+	$n=substr_count($d,'.');
+	for($i=0;$i<=$n;$i++){
+		if(in_array($c,$public_suffixes)){
+			if(substr($c,0,4)=='www.'&&$d<>"www.$c") $c=preg_replace('/^www\./','',$c); // strip www if not main domain
+			return "$l.$c";
+		}
+		$l=substr($c,0,strpos($c,'.'));
+		$c=substr($c,strpos($c,'.')+1);
+	}
+	return $d; // not found
 }
 
 function dorestart($msg,$sendquit=true){
