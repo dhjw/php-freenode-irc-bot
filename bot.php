@@ -927,36 +927,43 @@ while(1){
 							continue(2);
 						}
 
-						// youtube
-						if(strpos($u,'youtube.com/watch?v=')!==false || strpos($u,'/youtu.be/')!==false){
-							if(strpos($u,'/youtu.be/')!==false) $v=substr($purl['path'],1);
-							else {
-								parse_str($purl['query'],$v);
-								$v=$v['v'];
-							}
-							echo "v=$v\n";
-							for($i=$num_file_get_retries;$i>0;$i--){
-								$tmp=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=".urlencode($v)."&part=snippet,contentDetails,statistics&maxResults=1&type=video&key=$youtube_api_key");
-								$tmp=json_decode($tmp);
-								echo "tmp=".json_encode($tmp)."\n";
-								if(!empty($tmp)) break; else if($i>1) sleep(1);
-							}
-							if(empty($tmp)){
-								send("PRIVMSG $channel :[ Temporary YouTube API error ]\n");
+						// youtube via api
+						if(!empty($youtube_api_key)){
+							$yt='';
+							if(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/watch\?.*v=([a-zA-Z0-9-_]*)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]*)#',$u,$m)) $yt='v';
+							elseif(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/channel/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='c';
+							elseif(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/user/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='u';
+							if(!empty($yt)){
+								if($yt=='v') $r=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id={$m[1]}&part=snippet,contentDetails&maxResults=1&type=video&key=$youtube_api_key");
+								elseif($yt=='c' || $yt=='u') $r=file_get_contents("https://www.googleapis.com/youtube/v3/channels?".($yt=='c'?'id':'forUsername')."={$m[1]}&part=id,snippet&maxResults=1&key=$youtube_api_key");
+								$r=json_decode($r);
+								if(empty($r)){
+									send("PRIVMSG $channel :[ Temporary YouTube API error ]\n");
+									continue(2);
+								} elseif($yt=='v' && (empty($m[1]) || $r->pageInfo->totalResults==0)){
+									send("PRIVMSG $channel :Video does not exist.\n");
+									continue(2);
+								} elseif(($yt=='c' || $yt=='u') && (empty($m[1]) || $r->pageInfo->totalResults==0)){
+									send("PRIVMSG $channel :".($yt=='c'?'Channel':'User')." does not exist.\n");
+									continue(2);
+								}
+								$x='';
+								if($yt=='v'){
+									$d=covtime($r->items[0]->contentDetails->duration); // todo: text for live (P0D) & waiting to start (?)
+									if($d<>'0:00') $x.=" - $d";
+								} elseif($yt=='c' || $yt=='u'){
+									if(!empty($m[2]) && in_array($m[2],['videos','playlists','community','channels','search'])){ // not home/featured or about
+										$x=' - '.ucfirst($m[2]);
+									} elseif(!empty($r->items[0]->snippet->description)){
+										$d=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$r->items[0]->snippet->description);
+										$x=' - '.str_shorten(trim(preg_replace('!\s+!',' ',$d)),148);
+									}
+								}
+								$t="[ {$r->items[0]->snippet->title}$x ]";
+								if($title_bold) $t="\x02$t\x02";
+								send("PRIVMSG $channel :$t\n");
 								continue(2);
-							} elseif(empty($v) || $tmp->pageInfo->totalResults==0){
-								send("PRIVMSG $channel :Video does not exist.\n");
-								continue(2);
 							}
-							$ytextra='';
-							$dur=covtime($tmp->items[0]->contentDetails->duration);
-							if($dur<>'0:00') $ytextra.=" - $dur";
-							#$ytextra.=" | {$tmp->items[0]->snippet->channelTitle}";
-							#$ytextra.=" | ".number_format($tmp2->items[0]->statistics->viewCount)." views";
-							$title="[ {$tmp->items[0]->snippet->title}$ytextra ]";
-							if($title_bold) $title="\x02$title\x02";
-							send("PRIVMSG $channel :$title\n");
-							continue(2);
 						}
 
 						// wikipedia
