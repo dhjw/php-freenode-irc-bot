@@ -930,9 +930,9 @@ while(1){
 						// youtube via api
 						if(!empty($youtube_api_key)){
 							$yt='';
-							if(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/watch\?.*v=([a-zA-Z0-9-_]*)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]*)#',$u,$m)) $yt='v';
-							elseif(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/channel/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='c';
-							elseif(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/user/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='u';
+							if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/watch\?.*v=([a-zA-Z0-9-_]*)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]*)#',$u,$m)) $yt='v';
+							elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='c';
+							elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='u';
 							if(!empty($yt)){
 								if($yt=='v') $r=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id={$m[1]}&part=snippet,contentDetails&maxResults=1&type=video&key=$youtube_api_key");
 								elseif($yt=='c' || $yt=='u') $r=file_get_contents("https://www.googleapis.com/youtube/v3/channels?".($yt=='c'?'id':'forUsername')."={$m[1]}&part=id,snippet&maxResults=1&key=$youtube_api_key");
