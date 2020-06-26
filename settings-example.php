@@ -68,6 +68,7 @@ $flood_max_dupe_lines=3;
 $flood_max_dupe_time=600;
 
 // more options
+$perform_on_connect=''; // raw commands to perform on connect before channel join separated by semicolon, e.g. MODE $nick +i; PRIVMSG someone :some thing
 $allow_invalid_certs=false; // allow connections to sites with invalid ssl certificates
 $title_bold=false; // bold url titles. requires channel not have mode +c which strips colors
 $title_og=false; // use social media <meta property="og:title" ...> titles instead of <title> tags, if available

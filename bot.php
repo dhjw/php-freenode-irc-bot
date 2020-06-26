@@ -163,6 +163,13 @@ while(1){
 				send("PRIVMSG NickServ :IDENTIFY $user $pass\n");
 				sleep(2); // helps ensure cloak is applied on join
 			}
+			if(!empty($perform_on_connect)){
+				$cs=explode(';',$perform_on_connect);
+				foreach($cs as $c){
+					send(trim(str_replace('$nick',$nick,$c))."\n");
+					sleep(1);
+				}
+			}
 			send("WHOIS $nick\n"); // botmask detection
 			sleep(1);
 			send("JOIN $channel\n");
