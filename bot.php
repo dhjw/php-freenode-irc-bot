@@ -977,7 +977,7 @@ while(1){
 						if(preg_match("/^(?:https?:\/\/(?:.*?\.)?wiki(?:p|m)edia\.org\/wiki\/(.*)|https?:\/\/upload\.wikimedia\.org)/",$u,$m)){
 							// handle file urls whether on upload.wikimedia.org thumb or full, direct or url hash
 							$f='';
-							if(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/thumb\/.*\/(.*)\/.*/",$u,$m2)) $f=$m2[1];
+							if(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/.*\/thumb\/.*\/(.*)\/.*/",$u,$m2)) $f=$m2[1];
 							elseif(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/.*\/(.*\.(?:\w){3})/",$u,$m2)) $f=$m2[1];
 							elseif(preg_match("/^https?:\/\/(?:.*?\.)?wiki(?:p|m)edia\.org\/wiki\/File:(.*)/",$u,$m2)) $f=$m2[1];
 							elseif(preg_match("/^https?:\/\/(?:.*?\.)?wikipedia\.org\/wiki\/[^#]*(?:#\/media\/File:(.*))/",$u,$m2)) $f=$m2[1];
