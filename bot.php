@@ -1788,34 +1788,55 @@ function timedquiet($secs=0,$mask){
 }
 
 function get_wiki_extract($q,$len=280){
-	echo "get_wiki_extract($q,$len)\n";
 	$q=urldecode($q);
 	$url="https://en.wikipedia.org/w/api.php?action=query&titles=".urlencode($q)."&prop=extracts&format=json&redirects&formatversion=2&explaintext";
 	while(1){
-		echo "wikipedia connect.. url=$url.. ";
 		$tmp=curlget([CURLOPT_URL=>$url]);
 		if(empty($tmp)){
-			echo "no response/connect failed, retrying\n";
+			echo "No response from Wikipedia, retrying..\n";
 			continue;
 		}
 		break;
 	}
-	echo "tmp=$tmp\n";
 	if(!empty($tmp)){
 		$tmp=json_decode($tmp);
-		foreach($tmp->query->pages as $k){
-			if(mb_strpos($q,'#')!==false){ // jump to fragment
-				$frag=trim(str_replace('_',' ',mb_substr($q,mb_strpos($q,'#')+1)));
-				$k->extract=str_replace(['======','=====','====','==='],'==',$k->extract);
-				$pos=mb_stripos($k->extract,"\n== $frag ==\n");
-				if($pos!==false) $k->extract=mb_substr($k->extract,$pos);
+		$k=$tmp->query->pages[0];
+		unset($tmp);
+		if(mb_strpos($q,'#')!==false){ // jump to fragment
+			$foundfrag=false;
+			$frag=trim(str_replace('_',' ',mb_substr($q,mb_strpos($q,'#')+1)));
+			$k->extract=str_replace(['======','=====','====','==='],'==',$k->extract);
+			// try to find some sections with multiple ids, e.g. https://en.wikipedia.org/wiki/Microphone#Dynamic https://en.wikipedia.org/wiki/Microphone#Dynamic_microphone by removing additional words from fragment - useful for found hidden search-friendly ids with a shorter version in the table of contents e.g. !w dynamic microphone
+			$frags=explode(' ',$frag);
+			while(1){
+				$fragstr=implode(' ',$frags);
+				$pos=mb_stripos($k->extract,"\n== $fragstr ==\n");
+				if($pos!==false){
+					$k->extract=mb_substr($k->extract,$pos);
+					$foundfrag=true;
+					break;
+				} else {
+					if(count($frags)==1) break;
+					array_pop($frags);
+				}
 			}
-			$arr=explode("\n",trim($k->extract)); // reformat section headers
-			foreach($arr as $k=>$v) if(substr($v,0,2)=='==' && substr($v,-2,2)=='==') $arr[$k]=trim(str_replace('=','',$v)).': ';
-			$e=implode("\n",$arr);
-			$e=format_extract($e,$len);
-			echo "extract=$e\n";
 		}
+		$arr=explode("\n",trim($k->extract));
+		unset($k);
+		$unset=false;
+		foreach($arr as $k=>$v){ // reformat section headers
+			if(substr($v,0,3)=='== '){
+				if($foundfrag&&$v=="== $fragstr ==") $unset=$k; // remove current header
+				else $arr[$k]=trim(str_replace('==','',$v)).': ';
+			}
+		}
+		if($unset!==false){
+			unset($arr[$unset]);
+			$arr=array_values($arr);
+		}
+		$e=implode("\n",$arr);
+		$e=str_replace(' ()','',$e); // phonetics are often missing from extract
+		$e=format_extract($e,$len);
 	}
 	return $e;
 
