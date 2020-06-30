@@ -886,55 +886,48 @@ while(1){
 			if($urls){
 				foreach($urls as $u){
 					$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
-					$purl=parse_url($u);
 					foreach($ignore_urls as $v) if(preg_match('#^.*?://'.preg_quote($v).'#',$u)){
 						echo "Ignored URL $v\n";
 						continue(2);
 					}
-					if(strpos($u,'//mobile.twitter.com')!==false) $u=str_replace('//mobile.twitter.com','//twitter.com',$u);
 					$u_tries=0;
 					while(1){ // extra loop for retries
 						echo "Checking URL: $u\n";
 
 						// imgur titles by api
-						if(strpos($u,'//i.imgur.com/')!==false||strpos($u,'//imgur.com/gallery/')!==false){
-							// get the id and use the api
+						if(preg_match('#^https?://(?:i\.imgur\.com/(\w*)|imgur\.com/gallery/(\w*))#',$u,$m)){
+							if(!empty($m[1])||!empty($m[2])){
 							echo "getting from imgur api..\n";
-							$tmp=substr($purl['path'],1);
-							if(strpos($u,'//i.imgur.com/')!==false){
-								$tmp=substr($tmp,0,strrpos($tmp,'.'));
-								$tmpurl="https://api.imgur.com/3/image/$tmp";
-							} elseif(strpos($u,'//imgur.com/gallery/')!==false){
-								$tmp=substr($tmp,strrpos($tmp,'/')+1);
-								$tmpurl="https://api.imgur.com/3/album/$tmp";
+								if(!empty($m[1])) $tmp="https://api.imgur.com/3/image/{$m[1]}";
+								elseif(!empty($m[2])) $tmp="https://api.imgur.com/3/album/{$m[2]}";
+								$tmp=curlget([
+									CURLOPT_URL => $tmp,
+									CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
+								]);
+								$tmp=json_decode($tmp);
+								echo "response=".json_encode($tmp)."\n";
+								$out='';
+								if($tmp->success==1){
+									if(!empty($tmp->data->nsfw)) $out.='NSFW';
+									$tmpd=$tmp->data->description;
+									if(empty($tmpd)) $tmpd=$tmp->data->title;
+									if(!empty($tmpd)){
+										if(!empty($out)) $out.=' - ';
+										$tmpd=str_replace(["\r","\n","\t"],' ',$tmpd);
+										$tmpd=preg_replace('!\s+!',' ',$tmpd);
+										$tmpd=trim(strip_tags($tmpd));
+										$tmpd=str_shorten($tmpd,280);
+										$out.=$tmpd;
+									}
+									if(!empty($out)){
+										$out="[ $out ]";
+										if($title_bold) $out="\x02$out\x02";
+										send("PRIVMSG $channel :$out\n");
+									}
+									// todo: output image size, etc?
+								} else echo "imgur image not found or api fail\n";
+								continue(2);
 							}
-							$tmp=curlget([
-								CURLOPT_URL => $tmpurl,
-								CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
-							]);
-							$tmp=json_decode($tmp);
-							echo "response=".json_encode($tmp)."\n";
-							$out='';
-							if($tmp->success==1){
-								if(!empty($tmp->data->nsfw)) $out.='NSFW';
-								$tmpd=$tmp->data->description;
-								if(empty($tmpd)) $tmpd=$tmp->data->title;
-								if(!empty($tmpd)){
-									if(!empty($out)) $out.=' - ';
-									$tmpd=str_replace(["\r","\n","\t"],' ',$tmpd);
-									$tmpd=preg_replace('!\s+!',' ',$tmpd);
-									$tmpd=trim(strip_tags($tmpd));
-									$tmpd=str_shorten($tmpd,280);
-									$out.=$tmpd;
-								}
-								if(!empty($out)){
-									$out="[ $out ]";
-									if($title_bold) $out="\x02$out\x02";
-									send("PRIVMSG $channel :$out\n");
-								}
-								// todo: output image size, etc?
-							} else echo "imgur image not found or api fail\n";
-							continue(2);
 						}
 
 						// youtube via api
@@ -977,13 +970,13 @@ while(1){
 						}
 
 						// wikipedia
-						if(preg_match("/^(?:https?:\/\/(?:.*?\.)?wiki(?:p|m)edia\.org\/wiki\/(.*)|https?:\/\/upload\.wikimedia\.org)/",$u,$m)){
+						if(preg_match("#^(?:https?://(?:.*?\.)?wiki(?:p|m)edia\.org/wiki/(.*)|https?://upload\.wikimedia\.org)#",$u,$m)){
 							// handle file urls whether on upload.wikimedia.org thumb or full, direct or url hash
 							$f='';
-							if(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/.*\/thumb\/.*\/(.*)\/.*/",$u,$m2)) $f=$m2[1];
-							elseif(preg_match("/^https?:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/.*\/(.*\.(?:\w){3})/",$u,$m2)) $f=$m2[1];
-							elseif(preg_match("/^https?:\/\/(?:.*?\.)?wiki(?:p|m)edia\.org\/wiki\/File:(.*)/",$u,$m2)) $f=$m2[1];
-							elseif(preg_match("/^https?:\/\/(?:.*?\.)?wikipedia\.org\/wiki\/[^#]*(?:#\/media\/File:(.*))/",$u,$m2)) $f=$m2[1];
+							if(preg_match("#^https?://upload\.wikimedia\.org/wikipedia/.*/thumb/.*/(.*)/.*#",$u,$m2)) $f=$m2[1];
+							elseif(preg_match("#^https?://upload\.wikimedia\.org/wikipedia/commons/.*/(.*\.(?:\w){3})#",$u,$m2)) $f=$m2[1];
+							elseif(preg_match("#^https?://(?:.*?\.)?wiki(?:p|m)edia\.org/wiki/File:(.*)#",$u,$m2)) $f=$m2[1];
+							elseif(preg_match("#^https?://(?:.*?\.)?wikipedia\.org/wiki/[^\#]*(?:\#/media/File:(.*))#",$u,$m2)) $f=$m2[1];
 							if(!empty($f)){
 								if(strpos($f,'%')!==false) $f=urldecode($f);
 								echo "wikipedia media file: $f\n";
@@ -1090,25 +1083,21 @@ while(1){
 						}
 
 						// imdb
-						if(strstr($u,'imdb.com/title/tt')!==false){
-							$tmp=rtrim($purl['path'],'/');
-							$tmp=substr($tmp,strpos($tmp,'/tt')+1);
-							if(strstr($tmp,'/')===false){ // skip if anything but a title main page link
-								echo "found imdb link id $tmp\n";
-								// same as !m by id, except no imdb link in output
-								$cmd="http://www.omdbapi.com/?i=".urlencode($tmp)."&apikey={$omdb_key}";
-								echo "cmd=$cmd\n";
-								for($i=$num_file_get_retries;$i>0;$i--){
-									$tmp=file_get_contents($cmd);
-									$tmp=json_decode($tmp);
-									print_r($tmp);
-									if(!empty($tmp)) break; else if($i>1) sleep(1);
-								}
-								if(empty($tmp)){ send("PRIVMSG $channel :OMDB API error.\n"); continue(2); }
-								if($tmp->Type=='movie') $tmp3=''; else $tmp3=" {$tmp->Type}";
-								if($tmp->Response=='True') send("PRIVMSG $channel :\xe2\x96\xb6 {$tmp->Title} ({$tmp->Year}$tmp3) | {$tmp->Genre} | {$tmp->Actors} | \"{$tmp->Plot}\" [{$tmp->imdbRating}]\n"); elseif($tmp->Response=='False') send("PRIVMSG $channel :{$tmp->Error}\n"); else send("PRIVMSG $channel :OMDB API error.\n");
-								continue(2);
+						if(preg_match('#https?://(?:www.)?imdb.com/title/(tt\d*)(?:/)?(?:\?.*?)?$#',$u,$m)){
+							echo "Found imdb link id {$m[1]}\n";
+							// same as !m by id, except no imdb link in output
+							$cmd="http://www.omdbapi.com/?i=".urlencode($m[1])."&apikey={$omdb_key}";
+							echo "cmd=$cmd\n";
+							for($i=$num_file_get_retries;$i>0;$i--){
+								$tmp=file_get_contents($cmd);
+								$tmp=json_decode($tmp);
+								print_r($tmp);
+								if(!empty($tmp)) break; else if($i>1) sleep(1);
 							}
+							if(empty($tmp)){ send("PRIVMSG $channel :OMDB API error.\n"); continue(2); }
+							if($tmp->Type=='movie') $tmp3=''; else $tmp3=" {$tmp->Type}";
+							if($tmp->Response=='True') send("PRIVMSG $channel :\xe2\x96\xb6 {$tmp->Title} ({$tmp->Year}$tmp3) | {$tmp->Genre} | {$tmp->Actors} | \"{$tmp->Plot}\" [{$tmp->imdbRating}]\n"); elseif($tmp->Response=='False') send("PRIVMSG $channel :{$tmp->Error}\n"); else send("PRIVMSG $channel :OMDB API error.\n");
+							continue(2);
 						}
 
 						// outline.com
@@ -1123,7 +1112,7 @@ while(1){
 						// twitter via API
 						if(!empty($twitter_consumer_key)){
 							// tweet
-							if(preg_match('/^https?:\/\/twitter\.com\/(?:#!\/)?(?:\w+)\/status(?:es)?\/(\d+)/',$u,$m)){
+							if(preg_match('#^https?://(?:mobile\.)?twitter\.com/(?:\#!/)?(?:\w+)/status(?:es)?/(\d+)#',$u,$m)){
 								echo "getting tweet via API.. ";
 								if(!empty($m[1])){
 									$r=twitter_api('/statuses/show.json',['id'=>$m[1],'tweet_mode'=>'extended']);
@@ -1159,7 +1148,7 @@ while(1){
 									continue(2); // always abort, won't be a non-tweet URL
 								}
 							// bio
-							} elseif(preg_match("/^https?:\/\/twitter\.com\/(\w*)(?:[\?#].*)?$/",$u,$m)){
+							} elseif(preg_match("#^https?://(?:mobile\.)?twitter\.com/(\w*)(?:[\?\#].*)?$#",$u,$m)){
 								echo "getting twitter bio via API.. ";
 								if(!empty($m[1])){
 									$r=twitter_api('/users/show.json',['screen_name'=>$m[1]]);
@@ -1179,7 +1168,7 @@ while(1){
 										}
 										if(!empty($r->url)){
 											$u=$r->entities->url->urls[0]->expanded_url;
-											$u=preg_replace("/^(https?:\/\/[^\/]*?)\/$/","$1",$u); // strip trailing slash on domain-only links
+											$u=preg_replace("#^(https?://[^/]*?)/$#","$1",$u); // strip trailing slash on domain-only links
 											$t.=" | $u";
 										}
 										$t="[ $t ]";
@@ -1196,7 +1185,7 @@ while(1){
 						}
 
 						// instagram
-						if(preg_match('/https?:\/\/(?:www\.)?instagram\.com\/p\/([A-Za-z0-9-_]*)/',$u,$m)){
+						if(preg_match('#https?://(?:www\.)?instagram\.com/p/([A-Za-z0-9-_]*)#',$u,$m)){
 							if(!empty($m[1])){
 								$t='';
 								$r=@json_decode(file_get_contents("https://api.instagram.com/oembed/?url=https://www.instagram.com/p/$m[1]/"));
@@ -1238,9 +1227,9 @@ while(1){
 
 						if(!isset($header)) $header=[];
 
-						if(!empty($tor_enabled) && (substr($purl['host'],-6)=='.onion' || !empty($tor_all))){
+						if(!empty($tor_enabled) && (preg_match('#^http://(?:.*?)\.onion(?:$|/)#',$u) || !empty($tor_all))){
 							echo "getting url title via tor\n";
-							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>45,CURLOPT_TIMEOUT=>45,CURLOPT_HTTPHEADER=>$header]);
+							$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>60,CURLOPT_TIMEOUT=>60,CURLOPT_HTTPHEADER=>$header]);
 							if(empty($html)){
 								if(strpos($curl_error,"Failed to connect to $tor_host port $tor_port")!==false) send("PRIVMSG $channel :Tor error - is it running?\n");
 								elseif(strpos($curl_error,"Connection timed out after")!==false) send("PRIVMSG $channel :Tor connection timed out\n");
