@@ -95,6 +95,8 @@ if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty(
 if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
 if(empty($gcloud_translate_max_chars)) $gcloud_translate_max_chars=50000;
+if(empty($ignore_urls)) $ignore_urls=[];
+$ignore_urls=array_merge($ignore_urls,['google.com/search','google.com/images','scholar.google.com']);
 if(empty($skip_dupe_output)) $skip_dupe_output=false;
 $orignick=$nick;
 $lastnick='';
@@ -883,15 +885,16 @@ while(1){
 			// print_r($urls);
 			if($urls){
 				foreach($urls as $u){
+					$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
+					$purl=parse_url($u);
+					foreach($ignore_urls as $v) if(preg_match('#^.*?://'.preg_quote($v).'#',$u)){
+						echo "Ignored URL $v\n";
+						continue(2);
+					}
 					if(strpos($u,'//mobile.twitter.com')!==false) $u=str_replace('//mobile.twitter.com','//twitter.com',$u);
 					$u_tries=0;
 					while(1){ // extra loop for retries
-						foreach($ignore_urls as $iu) if(stristr($u,$iu)!==false){ echo "ignored url\n"; continue(3); }
-						if(strpos($u,'google.com/search')!==false || strpos($u,'google.com/images')!==false || strpos($u,'scholar.google.com')!==false){ echo "Skipping URL...\n"; continue(2); } // skip google searches
-						$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
 						echo "Checking URL: $u\n";
-						$purl=parse_url($u);
-						// print_r($purl);
 
 						// imgur titles by api
 						if(strpos($u,'//i.imgur.com/')!==false||strpos($u,'//imgur.com/gallery/')!==false){
@@ -1278,9 +1281,7 @@ while(1){
 						$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 						# strip numeric entities that don't seem to display right on IRC when converted
 						$title=preg_replace("/(&#[0-9]+;)/",'', $title);
-						// $notitlehosts=['wikipedia.org'];
 						$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet'];
-						foreach($notitlehosts as $nth) if(strpos($purl['host'],$nth)!==false && strpos($purl['path'],'/wiki/')!==false){ echo "string $nth found in URL $u. SKIPPING/IGNORING\n"; continue(3); }
 						$title=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$title);
 						$title=trim(preg_replace('!\s+!', ' ', $title));
 						foreach($notitletitles as $ntt) if($title==$ntt) continue(3);

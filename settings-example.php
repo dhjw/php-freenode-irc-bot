@@ -46,9 +46,9 @@ $ignore_nicks=[
 	// 'otherbot'
 ];
 
-// urls to ignore. case insensitive, automatic wildcard at beginning and end
+// urls to ignore titles for, starting with domain. e.g. 'example.com', 'example.com/path'
 $ignore_urls=[
-	// 'https://example.com',
+	// 'example.com'
 ];
 
 // blacklisted host strings and IPs. auto-quieted
