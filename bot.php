@@ -1221,6 +1221,52 @@ while(1){
 							}
 						}
 
+						// parler posts
+						if(preg_match('#^https?://(?:share\.par\.pw/post/|parler\.com/post-view\?q=)(\w*)#',$u,$m)){
+							$html=curlget([CURLOPT_URL=>"https://share.par.pw/post/{$m[1]}"]);
+							$dom=new DOMDocument();
+							if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html)){
+								$x=new DOMXPath($dom);
+								list($n)=$x->query('//*[@id="ud--name"]');
+								$a=$n->textContent;
+								list($n)=$x->query('//*[@id="post--content"]/p');
+								$b=$n->textContent;
+								if(!empty($a)&&!empty($b)){
+									$t=strip_tags(html_entity_decode("$a: $b",ENT_QUOTES | ENT_HTML5,'UTF-8'));
+									$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$t);
+									$t=trim(preg_replace('!\s+!',' ',$t));
+									$t=str_shorten($t,424,14);
+									// seems to randomly show post image or require login, require login for all links, randomly show author avatar if no image, may not display link/media even if it exists, and cant tell between links or media..  which is dumb. so we'll just add (link/media) when its clear there's a link or media
+									list($n)=$x->query('//*[@id="media-placeholder--wrapper"]');
+									$c=$n->textContent;
+									if(!empty($c)){
+										if(strpos($c,'you must be logged in')!==false) $t.=' (link/media)'; // $t.=' (media-login)';
+										else {
+											list($n)=$x->query('//*[@id="ud--avatar"]/img/@src');
+											$ai=$n->textContent;
+											list($n)=$x->query('//*[@id="media--placeholder"]/@src');
+											$pi=$n->textContent;
+											if($pi<>$ai) $t.=' (link/media)'; // not avatar of author
+										}
+									}
+									$t='[ '.trim($t).' ]';
+									if($title_bold) $t="\x02$t\x02";
+									send("PRIVMSG $channel :$t\n");
+									continue(2);
+								} else {
+									send("PRIVMSG $channel :[ Post not found ]\n");
+									continue(2);
+								}
+							} else echo "Error parsing Parler HTML\n";
+						}
+						// parler profile
+						if(preg_match('#^https?://parler\.com/profile/(\w*)/(\w*)#',$u,$m)){
+								$t="[ @{$m[1]} - ".ucfirst($m[2])." ]";
+								if($title_bold) $t="\x02$t\x02";
+								send("PRIVMSG $channel :$t\n");
+								continue(2);
+						}
+
 						// skips
 						$pathinfo=pathinfo($u);
 						if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
@@ -1979,7 +2025,7 @@ function str_replace_one($needle,$replace,$haystack){
 }
 
 // shorten string to last whole word within x characters and max bytes
-function str_shorten($s,$len){
+function str_shorten($s,$len,$less=0){
 	global $baselen;
 	$e=false;
 	if(mb_strlen($s)>$len){ // desired max chars
@@ -1987,7 +2033,7 @@ function str_shorten($s,$len){
 		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
 		$e=true;
 	}
-	$m=502-$baselen; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings
+	$m=502-$baselen-$less; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings
 	if(strlen($s)>$m){
 		$s=mb_strcut($s,0,$m); // mb-safe cut to bytes
 		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
