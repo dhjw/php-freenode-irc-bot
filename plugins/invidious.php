@@ -12,7 +12,6 @@ function plugin_invidious(){
 	for($i=$num_file_get_retries;$i>0;$i--){
 		$tmp=file_get_contents("https://www.googleapis.com/youtube/v3/search?q=".urlencode($args)."&part=snippet&maxResults=1&type=video&key=$youtube_api_key");
 		$tmp=json_decode($tmp);
-		echo "tmp=".print_r($tmp,true)."\n";
 		if(!empty($tmp)) break; else if($i>1) sleep(1);
 	}
 	$v=$tmp->items[0]->id->videoId;

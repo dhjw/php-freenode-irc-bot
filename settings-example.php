@@ -25,7 +25,7 @@ $imgur_client_id='';
 $currencylayer_key='';
 $omdb_key='';
 $wolfram_appid='';
-$twitter_consumer_key=''; // twitter api, apply at https://developer.twitter.com (use if twitter titles stop working)
+$twitter_consumer_key=''; // https://developer.twitter.com
 $twitter_consumer_secret='';
 $twitter_access_token='';
 $twitter_access_token_secret='';
@@ -76,7 +76,7 @@ $voice_bot=false; // voice the bot. requires +o channel access
 $disable_sasl=false;
 $disable_nickserv=false; // note: nickserv not used if sasl enabled
 $disable_help=false;
-$disable_triggers=false;
+$disable_triggers=false; // disable global triggers, not admin or custom triggers
 $disable_titles=false;
 $skip_dupe_output=false; // avoid repeating lines which can trigger some flood bots
 
