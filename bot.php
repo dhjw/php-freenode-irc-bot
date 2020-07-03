@@ -1269,6 +1269,83 @@ while(1){
 							continue(2);
 					}
 
+					// twitch via api
+					if(!empty($twitch_client_id) && preg_match('#https?://(?:www\.)?twitch\.tv/(\w+)(/\w+)?#',$u,$m)){
+						// get token, don't revalidate because won't be revoked - https://dev.twitch.tv/docs/authentication
+						echo "Getting Twitch token.. ";
+						if(empty($twitch_token)||$twitch_token_expires<time()){
+							$r=json_decode(curlget([CURLOPT_URL=>"https://id.twitch.tv/oauth2/token?client_id=$twitch_client_id=&client_secret=$twitch_client_secret&grant_type=client_credentials",CURLOPT_POST=>1,CURLOPT_HTTPHEADER=>["Client-ID: $twitch_client_id"]]));
+							if(!empty($r)&&!empty($r->access_token)){
+								echo "ok.\n";
+								$twitch_token=$r->access_token;
+								$twitch_token_expires=time()+$r->expires_in-30;
+							} else {
+								if(isset($r->message)) echo "error: {$r->message}\n"; else echo "error, r=".print_r($r,true);
+								$t='[ API error ]';
+								if($title_bold) $t="\x02$t\x02";
+								send("PRIVMSG $channel :$t\n");
+								$twitch_token='';
+								$twitch_token_expires=0;
+								continue(2);
+							}
+						} else echo "ok.\n";
+						if(!empty($twitch_token)){
+							// get user info - https://dev.twitch.tv/docs/api/reference#get-users
+							echo "Getting user info for \"{$m[1]}\".. ";
+							$r=json_decode(curlget([CURLOPT_URL=>"https://api.twitch.tv/helix/users?login={$m[1]}",CURLOPT_HTTPHEADER=>["Client-ID: $twitch_client_id","Authorization: Bearer $twitch_token"]]));
+							if(!empty($r)&&isset($r->data)){
+								if(isset($r->data[0])){
+									echo "ok.\n";
+									$un=$r->data[0]->display_name;
+									$ud=$r->data[0]->description; // shorten
+									if(!empty($m[2])){
+										// just show subdir
+										$t="[ $un: ".ucfirst(substr($m[2],1))." ]";
+										if($title_bold) $t="\x02$t\x02";
+										send("PRIVMSG $channel :$t\n");
+										continue(2);
+									} else {
+										// get live stream info - https://dev.twitch.tv/docs/api/reference#get-streams-metadata
+										echo "Getting live stream info.. ";
+										$r=json_decode(curlget([CURLOPT_URL=>"https://api.twitch.tv/helix/streams?user_login={$m[1]}",CURLOPT_HTTPHEADER=>["Client-ID: $twitch_client_id","Authorization: Bearer $twitch_token"]]));
+										if(!empty($r)&&isset($r->data)){
+											if(count($r->data)>0){
+												// check for live stream
+												foreach($r->data as $d) if($d->type=='live'){
+													echo "ok.\n";
+													$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$d->title);
+													$t=trim(preg_replace('!\s+!',' ',$t));
+													$t=str_shorten($t,424,14);
+													$t="[ $t ]";
+													if($title_bold) $t="\x02$t\x02";
+													send("PRIVMSG $channel :$t\n");
+													continue(3);
+												}
+											}
+											// no streams, show user info
+											echo "not streaming\n";
+											$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',"$un: $ud");
+											$t=trim(preg_replace('!\s+!',' ',$t));
+											$t=str_shorten($t,424,14);
+											$t="[ $t ]";
+											if($title_bold) $t="\x02$t\x02";
+											send("PRIVMSG $channel :$t\n");
+											continue(2);
+										} else {
+											if(isset($r->message)) echo "error: {$r->message}\n"; else echo "error, r=".print_r($r,true);
+										}
+									}
+								} else {
+									echo "not found, abort\n";
+								}
+							} else {
+								// api or connection error, shouldnt usually happen, continue silently
+								if(isset($r->message)) echo "error: {$r->message}\n"; else echo "error, r=".print_r($r,true);
+								continue(2);
+							}
+						}
+					}
+
 					// skips
 					$pathinfo=pathinfo($u);
 					if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
