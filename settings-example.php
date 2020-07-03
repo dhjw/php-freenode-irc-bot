@@ -1,6 +1,7 @@
 <?php
 // settings
-$admins=['dw1']; // array of account names
+$admins=['dw1']; // array of account names (registered nicks on rizon)
+$network='freenode'; // supported: freenode, gamesurge, rizon, other
 // $host='irc.freenode.net:6667';
 $host='ssl://irc.freenode.net:7000'; // ssl
 $channel='##examplechan';
@@ -74,9 +75,11 @@ $perform_on_connect=''; // raw commands to perform on connect before channel joi
 $allow_invalid_certs=false; // allow connections to sites with invalid ssl certificates
 $title_bold=false; // bold url titles. requires channel not have mode +c which strips colors
 $title_og=false; // use social media <meta property="og:title" ...> titles instead of <title> tags, if available
-$voice_bot=false; // voice the bot. requires +o channel access
+$voice_bot=false; // ask chanserv to voice the bot on join
+$op_bot=false; // ask chanserv to op the bot on join. will also automatically enable $always_opped
+$always_opped=false; // set to true if bot is auto-opped on join and should stay opped after admin actions
 $disable_sasl=false;
-$disable_nickserv=false; // note: nickserv not used if sasl enabled
+$disable_nickserv=false; // note: nickserv not used if sasl enabled. affects authserv process on gamesurge network
 $disable_help=false;
 $disable_triggers=false; // disable global triggers, not admin or custom triggers
 $disable_titles=false;

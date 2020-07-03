@@ -21,6 +21,10 @@ if(!empty($argv[2])){
 $instance_hash=md5(file_get_contents(dirname(__FILE__).'/bot.php'));
 $botdata=json_decode(file_get_contents($datafile));
 if(isset($botdata->nick)) $nick=$botdata->nick;
+if(empty($network) || !in_array($network,['freenode','rizon','gamesurge','other'])){
+	echo "Missing or invalid \$network setting. Using default Freenode.\n";
+	$network='freenode';
+}
 
 $helptxt = "*** $nick $channel !help ***\n\nglobal commands:\n";
 if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $helptxt.=" {$v[3]}\n";
@@ -35,27 +39,29 @@ if(!empty($wolfram_appid)) $helptxt.=" !wa <query> - query Wolfram Alpha\n";
 $helptxt.=" !ud <term> [definition #] - query Urban Dictionary with optional definition number\n";
 if(!empty($gcloud_translate_keyfile)) $helptxt.=" !tr <string> or e.g. !tr en-fr <string> - translate text to english or between other languages. see http://bit.ly/iso639-1\n";
 $helptxt.=" !flip - flip a coin (call heads or tails first!)
+ !rand <min> <max> [num] - get random numbers with optional number of numbers
  !8 or !8ball - magic 8-ball\n";
 if(file_exists('/usr/games/fortune')) $helptxt.=" !f or !fortune - fortune\n";
-$helptxt.=" !insult [target] - deliver a Shakespearian insult to the channel with an optional target\n\n";
-$helptxt.="admin commands:
+$helptxt.=" !insult [target] - deliver a Shakespearian insult to the channel with an optional target
+\nadmin commands:
  !s or !say <text> - output text to channel
  !e or !emote <text> - emote text to channel
  !t or !topic <message> - change channel topic
- !k or !kick <nick> [message] - kick a single user with an optional message
- !r or !remove <nick> [message] - remove a single user with an optional message (quiet, no 'kick' notice to client)
- !b or !ban <nick or hostmask> [message] - ban by nick (*!*@mask) or hostmask. if by nick, also remove user with optional message
- !ub or !unban <hostmasks> - unban by hostmask
- !q or !quiet [mins] <nick or hostmask> - quiet by nick (*!*@mask) or hostmask for optional [mins] or default no expiry
+ !k or !kick <nick> [message] - kick a single user with an optional message\n";
+if($network=='freenode') $helptxt.=" !r or !remove <nick> [message] - remove a single user with an optional message (quiet, no 'kick' notice to client)\n";
+$helptxt.=" !b or !ban <nick or hostmask> [message] - ban by nick (*!*@mask) or hostmask. if by nick, also remove user with optional message
+ !ub or !unban <hostmasks> - unban by hostmask\n";
+if($network=='freenode') $helptxt.= " !q or !quiet [mins] <nick or hostmask> - quiet by nick (*!*@mask) or hostmask for optional [mins] or default no expiry
  !rq or !removequiet [mins] <nick> [message] - remove user then quiet for optional [mins] with optional [message]
  !uq or !unquiet <hostmasks> - unquiet by hostmask
- !fyc [mins] <nick or hostmask> - ban by hostmask with redirect to ##fix_your_connection for [mins] or default 60 mins
- !nick <nick> - Change the bot's nick
+ !fyc [mins] <nick or hostmask> - ban by hostmask with redirect to ##fix_your_connection for [mins] or default 60 mins\n";
+$helptxt.=" !nick <nick> - Change the bot's nick
  !invite <nick> - invite to channel
  !restart [message] - reload bot with optional quit message
  !update [message] - update bot with the latest from github and reload with optional quit message
  !die [message] - kill bot with optional quit message
-note: commands may be used in channel or pm. separate multiple hostmasks with spaces. bans, quiets, invites occur in $channel.";
+
+note: commands may be used in channel or pm. separate multiple hostmasks with spaces. bans,".($network=='freenode'?' quiets,':'')." invites occur in $channel.";
 
 // update help paste only if changed
 echo "Checking if help text changed.. ";
@@ -87,10 +93,14 @@ if(!isset($help_url)){
 // main loop
 if(isset($connect_ip) && strpos($connect_ip,':')!==false) $connect_ip="[$connect_ip]"; // add brackets to ipv6
 if(isset($curl_iface) && strpos($curl_iface,':')!==false) $curl_iface="[$curl_iface]";
-if(($user=='your_username' && $pass=='your_password') || (empty($user) && empty($pass))){
-	echo "NOTICE: Username and password not set. Disabling SASL and Nickserv authentication.\n";
+if(($user=='your_username' || $pass=='your_password' || empty($user) || empty($pass)) && (empty($disable_sasl) || empty($disable_nickserv))){
+	echo "Username or password not set. Disabling authentication.\n";
 	$disable_sasl=true;
 	$disable_nickserv=true;
+}
+if($network=='gamesurge' && empty($disable_sasl)){
+	echo "GameSurge network doesn't support SASL, disabling.\n";
+	$disable_sasl=true;
 }
 if(empty($ircname)) $ircname=$user;
 if(empty($ident)) $ident='bot';
@@ -98,6 +108,7 @@ if(empty($gcloud_translate_max_chars)) $gcloud_translate_max_chars=50000;
 if(empty($ignore_urls)) $ignore_urls=[];
 $ignore_urls=array_merge($ignore_urls,['google.com/search','google.com/images','scholar.google.com']);
 if(empty($skip_dupe_output)) $skip_dupe_output=false;
+if(!empty($op_bot)) $always_opped=true;
 $orignick=$nick;
 $last_nick_change=0;
 $opped=false;
@@ -113,6 +124,7 @@ if(!isset($custom_loop_functions)) $custom_loop_functions=[];
 
 while(1){
 	if($connect){
+		$in_channel=0;
 		// connect loop
 		while(1){
 			$botmask='';
@@ -140,9 +152,12 @@ while(1){
 			send("NICK $nick\n");
 			send("USER $ident $user $user :{$ircname}\n"); // first $user can be changed to modify ident and account login still works
 			if(!empty($pass)) send("PASS $pass\n");
-			send("CAP REQ account-notify\n");
-			send("CAP REQ extended-join\n");
-			send("CAP END\n");
+			if($network=='freenode'){
+				send("CAP REQ account-notify\n");
+				send("CAP REQ extended-join\n");
+				send("CAP END\n");
+			} elseif(empty($disable_sasl)) send("CAP END\n");
+
 			// set up and wait til end of motd
 			while($data=fgets($socket)){
 				echo $data;
@@ -160,9 +175,14 @@ while(1){
 				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 			}
 
-			if(!empty($user) && !empty($pass) && !empty($disable_sasl) && empty($disable_nickserv)){
-				echo "Authenticating with Nickserv\n";
-				send("PRIVMSG NickServ :IDENTIFY $user $pass\n");
+			if(!empty($disable_sasl) && empty($disable_nickserv)){
+				if($network=='gamesurge'){
+					echo "Authenticating with AuthServ\n";
+					send("PRIVMSG AuthServ@Services.GameSurge.net :auth $user $pass\n");
+				} else {
+					echo "Authenticating with NickServ\n";
+					send("PRIVMSG NickServ :IDENTIFY $user $pass\n");
+				}
 				sleep(2); // helps ensure cloak is applied on join
 			}
 			if(!empty($perform_on_connect)){
@@ -292,7 +312,8 @@ while(1){
 				$botdata=json_decode(file_get_contents($datafile));
 				$botdata->nick=$nick;
 				file_put_contents($datafile,json_encode($botdata));
-				send("PRIVMSG NickServ GROUP\n");
+				if($network=='freenode' && (empty($disable_nickserv) || empty($disable_sasl))) send("PRIVMSG NickServ GROUP\n");
+				elseif($network=='rizon' && (empty($disable_nickserv) || empty($disable_sasl))) send("PRIVMSG NickServ GROUP $user $pass\n");
 				$base_msg_len=strlen(":$nick!~$ident@$botmask PRIVMSG  :\r\n");
 				continue;
 			} else {
@@ -300,6 +321,7 @@ while(1){
 				$id=search_multi($users,'nick',$tmpnick);
 				if(!empty($id))	$users[$id]['nick']=rtrim(substr($ex[2],1));
 				else echo "ERROR: Nick changed but not in \$users. This should not happen!\n";
+				if($network=='rizon') send("WHO $tmpnick\n"); // check for account again
 				continue;
 			}
 		}
@@ -307,6 +329,7 @@ while(1){
 		// ping pong
 		if($ex[0] == "PING"){
 			send_no_filter("PONG ".rtrim($ex[1])."\n");
+			if(!$in_channel) send("JOIN $channel\n");
 			continue;
 		}
 
@@ -322,14 +345,31 @@ while(1){
 
 		// end of NAMES list, joined main channel so do a WHO now
 		if($ex[1]=='366'){
-			send("WHO $channel %hna\n");
+			$in_channel=1;
+			if(in_array($network,['freenode','gamesurge'])) send("WHO $channel %hna\n"); else send("WHO $channel\n");
 			continue;
 		}
 
 		// parse WHO listing
-		if($ex[1]=='354'){
-			$users[]=['nick'=>$ex[4], 'host'=>$ex[3], 'account'=>rtrim($ex[5])];
-			// quiet any blacklisted users in channel
+		if($ex[1]=='352'){ // rfc1459 - rizon
+			if(strpos($ex[8],'r')!==false) $a=$ex[7]; else $a='0';
+			$id=search_multi($users,'nick',$ex[7]);
+			if(empty($id)) $users[]=['nick'=>$ex[7],'host'=>$ex[5],'account'=>$a];
+			else {
+				$users[$id]['host']=$ex[5];
+				$users[$id]['account']=$a;
+			}
+			if($host_blacklist_enabled) check_blacklist($ex[4],$ex[3]);
+			// check_dnsbl($ex[7],$ex[5],true);
+			continue;
+		}
+		if($ex[1]=='354'){ // freenode, gamesurge
+			$id=search_multi($users,'nick',$ex[4]);
+			if(empty($id)) $users[]=['nick'=>$ex[4],'host'=>$ex[3],'account'=>rtrim($ex[5])];
+			else {
+				$users[$id]['host']=$ex[3];
+				$users[$id]['account']=rtrim($ex[5]);
+			}
 			if($host_blacklist_enabled) check_blacklist($ex[4],$ex[3]);
 			// check_dnsbl($ex[7],$ex[5],true);
 			continue;
@@ -337,26 +377,38 @@ while(1){
 
 		// 315 end of WHO list
 		if($ex[1]=='315'){
-			echo "Join to $channel complete.\n";
-			// foreach($users as $tmp) echo "\t{$tmp['nick']}\t{$tmp['host']}\t{$tmp['account']}\n";
-			// voice bot if enabled
-			if(!empty($voice_bot)) send("PRIVMSG ChanServ :VOICE $channel\n");
+			if(empty($first_join_done)){
+				echo "Join to $channel complete.\n";
+				if(!empty($op_bot)) send("PRIVMSG ChanServ :OP $channel $nick\n");
+				if(!empty($voice_bot)) send("PRIVMSG ChanServ :VOICE $channel $nick\n");
+				$first_join_done=true;
+			}
 			continue;
 		}
 
 		// Update $users on JOIN, PART, QUIT, KICK, NICK
 		if($ex[1]=='JOIN' && !isme()){
-			// just add the user to the array because they shouldnt be there already
+			// just add user to array because they shouldnt be there already
 			// parse ex0 for username and hostmask
 			list($tmpnick,$tmphost)=parsemask($ex[0]);
-			if($ex[3]=='*') $ex[3]=0;
-			$users[]=['nick'=>$tmpnick, 'host'=>$tmphost, 'account'=>$ex[3]];
+			if($network=='freenode'){ // extended-join with account
+				if($ex[3]=='*') $ex[3]='0';
+				$users[]=['nick'=>$tmpnick,'host'=>$tmphost,'account'=>$ex[3]];
+			} else {
+				$users[]=['nick'=>$tmpnick,'host'=>$tmphost,'account'=>'0'];
+				if($network=='gamesurge') send("WHO $tmpnick %hna\n"); else send("WHO $tmpnick\n");
+			}
 			if($host_blacklist_enabled) check_blacklist($tmpnick,$tmphost);
 			// if(!isadmin()) check_dnsbl($tmpnick,$tmphost); else echo "dnsbl check skipped: isadmin\n";
 			continue;
 		}
 
-		if(($ex[1]=='PART' || $ex[1]=='QUIT' || $ex[1]=='KICK') && !isme()){
+		if($ex[1]=='PART' || $ex[1]=='QUIT' || $ex[1]=='KICK'){
+			if(($ex[1]=='PART' && isme()) || ($ex[1]=='KICK' && $ex[3]==$nick)){ // left channel, rejoin
+				$in_channel=0;
+				send("JOIN $channel\n");
+				continue;
+			}
 			if($ex[1]=='KICK') $tmpnick=$ex[3]; else list($tmpnick)=parsemask($ex[0]);
 			$id=search_multi($users,'nick',$tmpnick);
 			if(!empty($id)){
@@ -383,11 +435,6 @@ while(1){
 			} elseif ($trigger == '!e' || $trigger == '!emote') {
 				send( "PRIVMSG $channel :".pack('C',0x01)."ACTION $args".pack('C',0x01)."\n");
 				continue;
-			} elseif($trigger == '!recon'){
-				echo "Reconnecting..\n";
-				send("QUIT :$incnick told me to reconnect\n");
-				$connect=true;
-				break;
 			} elseif($trigger == '!ban' || $trigger == '!b'){
 				// if there's a space get the ban reason and use it for remove
 				if(strpos($args,' ')!==false) $reason=substr($args,strpos($args,' ')+1); else $reason="Goodbye.";
@@ -401,8 +448,7 @@ while(1){
 						send("PRIVMSG $tmp :Nick not found in channel.\n");
 						continue;
 					}
-					// if has account ban by account else create mask
-					if($users[$id]['account']<>'*' && $users[$id]['account']<>'0') $mask='$a:'.$users[$id]['account'];
+					if($network=='freenode' && $users[$id]['account']<>'0') $mask='$a:'.$users[$id]['account'];
 					else $mask="*!*@".$users[$id]['host'];
 				} else $tmpnick='';
 				$mask=str_replace('@gateway/web/freenode/ip.','@',$mask);
@@ -412,7 +458,7 @@ while(1){
 			} elseif($trigger == '!unban' || $trigger == '!ub'){
 				$opqueue[]=['-b',explode(' ',$args)];
 				getops();
-			} elseif($trigger == '!quiet' || $trigger == '!q'){
+			} elseif(($trigger == '!quiet' || $trigger == '!q') && $network=='freenode'){
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
 					$timed=1;
@@ -431,16 +477,17 @@ while(1){
 							continue;
 						}
 						// if has account use it else create mask
-						if($users[$id]['account']<>'*' && $users[$id]['account']<>'0') $who='$a:'.$users[$id]['account'];
+						if($network=='freenode' && $users[$id]['account']<>'0') $who='$a:'.$users[$id]['account'];
 						else $who="*!*@".$users[$id]['host'];
 					}
 					echo "Quiet $who, timed=$timed tqtime=$tqtime\n";
 					$who=str_replace('@gateway/web/freenode/ip.','@',$who);
 					if($timed) timedquiet($tqtime,$who);
 					else send("PRIVMSG chanserv :QUIET $channel $who\n");
+					// todo: +q instead of chanserv quiet for 'other' network, and enable !q
 				}
 				continue;
-			} elseif($trigger == '!removequiet' || $trigger == '!rq'){ // shadowquiet when channel +z
+			} elseif(($trigger == '!removequiet' || $trigger == '!rq') && $network=='freenode'){ // shadowquiet when channel +z
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
 					$timed=1;
@@ -462,7 +509,7 @@ while(1){
 						continue;
 					} else $thenick=$who;
 					// if has account use it else create mask
-					if($users[$id]['account']<>'*' && $users[$id]['account']<>'0') $who='$a:'.$users[$id]['account'];
+					if($network=='freenode' && $users[$id]['account']<>'0') $who='$a:'.$users[$id]['account'];
 					else $who="*!*@".$users[$id]['host'];
 				}
 				echo "Quiet $who, timed=$timed tqtime=$tqtime\n";
@@ -470,12 +517,13 @@ while(1){
 				$opqueue[]=['remove_quiet',$who,['nick'=>$thenick, 'msg'=>$m, 'timed'=>$timed, 'tqtime'=>$tqtime]];
 				getops();
 				continue;
-			} elseif($trigger == '!unquiet' || $trigger == '!uq'){
+			} elseif(($trigger == '!unquiet' || $trigger == '!uq') && $network=='freenode'){
 				// $opqueue[]=['-q',explode(' ',$args)];
 				// getops();
 				send("PRIVMSG chanserv :UNQUIET $channel $args\n");
 				continue;
-			} elseif($trigger == '!fyc'){
+				// todo: -q instead of chanserv unquiet for 'other' network, and enable !uq
+			} elseif($trigger == '!fyc' && $network=='freenode'){
 				// check if mins provided
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
@@ -484,7 +532,6 @@ while(1){
 					unset($arr[0]);
 					$arr=array_values($arr);
 				} else $fyctime=60;
-
 				list($mask)=$arr;
 				// if contains $ or @, ban by mask, else build mask from nick
 				if(strpos($mask,'@')===false && strpos($mask,'$')===false){
@@ -501,8 +548,11 @@ while(1){
 				getops();
 				continue;
 			} elseif($trigger == '!t' || $trigger == '!topic'){
-				// $opqueue[]=['topic',null,['msg'=>$args]]; getops();
-				send("PRIVMSG ChanServ :TOPIC $channel $args\n");
+				if(in_array($network,['freenode','gamesurge','rizon'])) send("PRIVMSG ChanServ :TOPIC $channel $args\n");
+				else {
+					$opqueue[]=['topic',null,['msg'=>$args]];
+					getops();
+				}
 				continue;
 			} elseif($trigger == '!die'){
 				send("QUIT :".(!empty($args)?$args:'shutdown')."\n");
@@ -510,14 +560,14 @@ while(1){
 			} elseif($trigger == '!k' || $trigger == '!kick'){
 				$arr=explode(' ',$args);
 				if(empty($arr)) continue;
-				if($arr[1]) $m=substr($args,strpos($args,' ')+1); else $msg=false;
+				if($arr[1]) $m=substr($args,strpos($args,' ')+1); else $m=false;
 				$opqueue[]=['kick',$arr[0],['msg'=>$m]];
 				getops();
 				continue;
-			}  elseif($trigger == '!r' || $trigger == '!remove'){
+			}  elseif(($trigger == '!r' || $trigger == '!remove') && $network=='freenode'){
 				$arr=explode(' ',$args);
 				if(empty($arr)) continue;
-				if($arr[1]) $m=substr($args,strpos($args,' ')+1); else $msg=false;
+				if($arr[1]) $m=substr($args,strpos($args,' ')+1); else $m=false;
 				echo "Remove {$arr[0]}, msg={$m}\n";
 				$opqueue[]=['remove',$arr[0],['msg'=>$m]];
 				getops();
@@ -1489,12 +1539,13 @@ function curlget($opts=[]){
 	curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
 	if(!empty($allow_invalid_certs)) curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_setopt($ch, CURLOPT_ENCODING, ''); // avoid gzipped result per http://stackoverflow.com/a/28295417
-	$default_header=[ // seem to help some servers
+	$default_header=[];
+	/*$default_header=[ // seem to help some servers
 		'Connection: keep-alive',
 		'Upgrade-Insecure-Requests: 1',
 		'Accept-Language: en'
 	];
-	curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $header);*/
 	// partially read big connections per https://stackoverflow.com/a/17641159
 	curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($handle,$data){
 		global $curl_response;
@@ -1517,11 +1568,11 @@ function curlget($opts=[]){
 }
 
 function isadmin(){
-	global $admins,$ex,$users;
-	$n=substr($ex[0],1,strpos($ex[0],'!')-1);
-	$r=search_multi($users,'nick',$n);
+	// todo: verify admins that send commands without being in channel user list
+	global $admins,$incnick,$users;
+	$r=search_multi($users,'nick',$incnick);
 	if(empty($r)) return false;
-	if(in_array($users[$r]['account'],$admins))return true; else return false;
+	if(in_array($users[$r]['account'],$admins,true)) return true; else return false;
 }
 function isme(){
 	global $ex,$nick;
@@ -1529,45 +1580,60 @@ function isme(){
 }
 
 function doopdop(){
-	global $datafile,$nick,$channel,$opped,$opqueue,$doopdop_lock;
+	global $datafile,$nick,$channel,$opped,$opqueue,$doopdop_lock,$always_opped;
 	if($doopdop_lock || empty($opqueue)) return;
 	$doopdop_lock=true;
 	foreach($opqueue as $oq){
-		//print_r($oq);
 		list($what,$who,$opts)=$oq;
 		// kick
 		if($what=='kick'){
 			if($opts['msg']) $msg=' :'.$opts['msg']; else $msg='';
 			send("KICK $channel $who$msg\n");
-			send("MODE $channel -o $nick\n");
+			if(empty($always_opped)) send("MODE $channel -o $nick\n");
 		} elseif($what=='remove'){
 			if($opts['msg']) $msg=' :'.$opts['msg']; else $msg='';
 			send("REMOVE $channel $who$msg\n");
-			send("MODE $channel -o $nick\n");
+			if(empty($always_opped)) send("MODE $channel -o $nick\n");
 		} elseif($what=='remove_quiet'){
 			if($opts['msg']) $msg=' :'.$opts['msg']; else $msg='';
 			send("REMOVE $channel {$opts['nick']}$msg\n");
-			send("MODE $channel -o $nick\n");
+			if(empty($always_opped)) send("MODE $channel -o $nick\n");
 			if($opts['timed']) timedquiet($opts['tqtime'],$who);
 			else send("PRIVMSG chanserv :QUIET $channel $who\n");
-		}/* elseif($what=='topic'){
+		} elseif($what=='topic'){
 			if(empty($opts['msg'])) continue;
 			send("TOPIC $channel :{$opts['msg']}\n");
-			send("MODE $channel -o $nick\n");
-		}*/ elseif($what=='invite'){
+			if(empty($always_opped)) send("MODE $channel -o $nick\n");
+		} elseif($what=='invite'){
 			if(empty($who)) continue;
 			send("INVITE $who $channel\n");
-			send("MODE $channel -o $nick\n");
+			if(empty($always_opped)) send("MODE $channel -o $nick\n");
 		} elseif($what=='+b'){
 			list($tmpmask,$tmpreason,$tmpnick,$tmptime)=$who;
-			if(!empty($tmpnick)) send("REMOVE $channel $tmpnick :$tmpreason\n");
-			send("MODE $channel +b-o $tmpmask $nick\n");
+			if(!empty($tmpnick) && $network=='freenode') send("REMOVE $channel $tmpnick :$tmpreason\n");
+			if(empty($always_opped)){
+				if($network=='freenode') send("MODE $channel +b-o $tmpmask $nick\n");
+				else {
+					if(!empty($tmpnick)){
+						send("MODE $channel +b $tmpmask\n");
+						send("KICK $channel $tmpnick :$tmpreason\n");
+						send("MODE $channel -o $nick\n");
+					} else send("MODE $channel +b-o $tmpmask $nick\n"); // todo: find nick by mask and kick
+				}
+			} else {
+				send("MODE $channel +b $tmpmask\n");
+				if(!empty($tmpnick) && $network<>'freenode') send("KICK $channel $tmpnick :$tmpreason\n");
+			}
 		} elseif($what=='-b'){
-			if(count($who)>3) $who=array_slice($who,0,3);
-			$mode='-';
-			foreach($who as $w) $mode.='b';
-			$mode.='o';
-			send("MODE $channel $mode ".implode(' ',$who)." $nick\n");
+			if(empty($always_opped)){
+				if(count($who)>3) $who=array_slice($who,0,3);
+				$mode='-'.str_repeat('b',count($who)).'o';
+				send("MODE $channel $mode ".implode(' ',$who)." $nick\n");
+			} else {
+				if(count($who)>4) $who=array_slice($who,0,4);
+				$mode='-'.str_repeat('b',count($who));
+				send("MODE $channel $mode ".implode(' ',$who)."\n");
+			}
 		} elseif($what=='fyc'){
 			list($tmpmask,$tmptime)=$who;
 			$fyctime=$tmptime*60;
@@ -1579,7 +1645,8 @@ function doopdop(){
 				$botdata->fyc[]=time()."|$fyctime|".$tmpmask;
 				file_put_contents($datafile,json_encode($botdata));
 			}
-			send("MODE $channel +b-o $tmpmask $nick\n");
+			if(empty($always_opped)) send("MODE $channel +b-o $tmpmask $nick\n");
+			else send("MODE $channel +b $tmpmask\n");
 		}
 	}
 	$opped=false;
@@ -1589,7 +1656,8 @@ function doopdop(){
 }
 
 function getops(){
-	global $socket,$channel,$opped,$getops_lock;
+	global $socket,$channel,$opped,$getops_lock,$always_opped;
+	if($always_opped) return doopdop(); // just run the queue
 	if($getops_lock==true) return;
 	$getops_lock=true;
 	send("PRIVMSG ChanServ :OP $channel\n");
