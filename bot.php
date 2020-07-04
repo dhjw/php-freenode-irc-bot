@@ -928,7 +928,7 @@ while(1){
 
 		// URL Titles
 		if($ex[1]=='PRIVMSG' && $ex[2]==$channel && !isme() && !$disable_titles){
-			preg_match_all('#\b(https?://(?:[a-zA-Z0-9-]{1,63}\.){1,}[a-zA-Z0-9]+(?:[/\?][^\s`!()\[\]{};\'",<>«»“”‘’\#]*)?)#i',$msg,$m); // get urls
+			preg_match_all('#\b(https?://(?:[a-zA-Z0-9-]{1,63}\.){1,}[a-zA-Z0-9]+(?:[/\?][^\s`!\[\]{};\'"<>«»“”‘’\#]*)?)#i',$msg,$m); // get urls
 			if(!empty($m[0])) $urls=array_unique($m[0]); else $urls=[];
 			foreach($urls as $u){
 				$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
