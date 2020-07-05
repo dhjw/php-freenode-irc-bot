@@ -1,16 +1,16 @@
-## PHP Freenode IRC Bot
-A simple but powerful [FreeNode](https://freenode.net/) IRC bot written in PHP
+## PHP IRC Bot
+A simple but powerful IRC bot written in PHP. Supports [FreeNode](https://freenode.net), [GameSurge](https://gamesurge.net), [Rizon](https://www.rizon.net) and other networks.
 
 ### How to use
-- Install php with pcntl, cURL, mbstring, xml and json support, e.g. on ubuntu `sudo apt install php php-curl php-mbstring php-xml php-json`
+- Install PHP with pcntl, cURL, mbstring, XML and JSON support, e.g. on Ubuntu `sudo apt install php php-curl php-mbstring php-xml php-json`
 - Clone this repository. `git clone https://github.com/dhjw/php-freenode-irc-bot` or just download [bot.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/bot.php) and [settings-example.php](https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/settings-example.php)
 - Copy `settings-example.php` to `settings-<instance>.php`
-- Create a Freenode account for the bot to authenticate. See `/msg nickserv help register`
+- Create an account for the bot to authenticate. See `/msg nickserv help register` (Freenode, Rizon) or `/msg authserv help register` (GameSurge), or just use your existing user credentials
 - Install pastebinit for help text (recommended) `sudo apt install pastebinit` or find a binary [here](https://pkgs.org/download/pastebinit)
 - [Get a bitly token](https://bitly.com) for short URLs (recommended)
 - Edit the `settings-<instance>.php` file to contain your settings, username and password
-- Run the bot with `php bot.php <instance>` or `php bot.php <instance> test` for test mode. On Linux it is recommended to run the bot in `screen` so closing the terminal won't kill the bot
-- For admin op commands give the bot account +ort access with ChanServ for your channel. `/msg chanserv flags ##example botuser +ort`
+- Run the bot with `php bot.php <instance>` or `php bot.php <instance> test` for test mode. On Linux it is recommended to run the bot in [screen](https://www.google.com/search?q=linux+screen) so closing the terminal won't kill the bot
+- For Freenode admin op commands give the bot account access with ChanServ for your channel `/msg chanserv flags ##example botuser +ort`
 
 ## Setting up Services
 ### YouTube URL info and search via !yt
