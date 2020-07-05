@@ -1286,7 +1286,7 @@ while(1){
 								$t=strip_tags(html_entity_decode("$a: $b",ENT_QUOTES | ENT_HTML5,'UTF-8'));
 								$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$t);
 								$t=trim(preg_replace('!\s+!',' ',$t));
-								$t=str_shorten($t,424,14);
+								$t=str_shorten($t,424,['less'=>13]);
 								// seems to randomly show post image or require login, require login for all links, randomly show author avatar if no image, may not display link/media even if it exists, and cant tell between links or media..  which is dumb. so we'll just add (link/media) when its clear there's a link or media and skip avatar images
 								list($n)=$x->query('//*[@id="media-placeholder--wrapper"]');
 								$c=$n->textContent;
@@ -1365,7 +1365,7 @@ while(1){
 													echo "ok.\n";
 													$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$d->title);
 													$t=trim(preg_replace('!\s+!',' ',$t));
-													$t=str_shorten($t,424,14);
+													$t=str_shorten($t,424);
 													$t="[ $t ]";
 													if($title_bold) $t="\x02$t\x02";
 													send("PRIVMSG $channel :$t\n");
@@ -1376,7 +1376,7 @@ while(1){
 											echo "not streaming\n";
 											$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',"$un: $ud");
 											$t=trim(preg_replace('!\s+!',' ',$t));
-											$t=str_shorten($t,424,14);
+											$t=str_shorten($t,424);
 											$t="[ $t ]";
 											if($title_bold) $t="\x02$t\x02";
 											send("PRIVMSG $channel :$t\n");
@@ -2175,21 +2175,24 @@ function str_replace_one($needle,$replace,$haystack){
 }
 
 // shorten string to last whole word within x characters and max bytes
-function str_shorten($s,$len,$less=0){
+function str_shorten($s,$len,$opts=[]){
 	global $baselen;
+	if(!isset($opts['less'])) $opts['less']=0;
+	if(!isset($opts['nodots'])) $opts['nodots']=false;
 	$e=false;
 	if(mb_strlen($s)>$len){ // desired max chars
 		$s=mb_substr($s,0,$len);
 		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
 		$e=true;
 	}
-	$m=502-$baselen-$less; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings
+	$m=502-$baselen-$opts['less']; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings
+	if($opts['nodots']) $m+=4;
 	if(strlen($s)>$m){
 		$s=mb_strcut($s,0,$m); // mb-safe cut to bytes
 		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
 		$e=true;
 	}
-	if($e) $s=rtrim($s,' ;.,').' ...';  // trim punc & add ellipses
+	if($e) $s=rtrim($s,' ;.,').(!$opts['nodots']?' ...':'');  // trim punc & add ellipses
 	return $s;
 }
 
