@@ -40,16 +40,20 @@ function bible(){
 	$text='';
 	foreach($verses as $k=>$verse){
 		$r=curlget([CURLOPT_URL=>"https://api.scripture.api.bible/v1/bibles/de4e12af7f28f599-02/passages/$bookid.$chap.$verse",CURLOPT_HTTPHEADER=>["api-key: $bible_key"]]);
-		if(empty($r)&&empty($text)) return(send("PRIVMSG $target :Error getting verse: No response\n"));
-		$r=json_decode($r);
-		if((isset($r->error) || !isset($r->data) || !isset($r->data->content)) && empty($text)) return(send("PRIVMSG $target :Error getting verse".(isset($r->error)?": {$r->error}":'')."\n"));
-		$r->data->content=str_replace('</span>','</span> ',$r->data->content);
-		$r->data->content=preg_replace("/<span class=\"add\">(.*?)<\/span>/","<span class=\"add\">\x1F$1\x1F</span>",$r->data->content);
-		$r->data->content=strip_tags($r->data->content);
-		$r->data->content=substr($r->data->content,strpos($r->data->content,' ')+1);
-		$r->data->content=preg_replace("/\s+/",' ',$r->data->content);
-		foreach(['.',':',';'] as $v) $r->data->content=str_replace(" $v",$v,$r->data->content);
-		$r->data->content=str_replace('¶','',$r->data->content);
+		$r=@json_decode($r);
+		if(empty($r)) return(send("PRIVMSG $target :API not responding. Try again later.\n"));
+		elseif(isset($r->error)){
+			if($r->statusCode=='404'){
+				if(empty($text)) return(send("PRIVMSG $target :Verse".(count($verses)>1?'s':'')." not found.\n"));
+				else continue;
+			}
+			return(send("PRIVMSG $target :Error: {$r->error}\n"));
+		}
+		$r->data->content=preg_replace('/<p.*?>(.+?)<\/p>/',"$1",$r->data->content);
+		$r->data->content=preg_replace('/<span .*?class="v">.+?<\/span>/','',$r->data->content);
+		$r->data->content=preg_replace('/<span class="add">(.+?)<\/span>/',"\x1F$1\x1F",$r->data->content);
+		$r->data->content=preg_replace('/<span class="\w+">(.+?)<\/span>/',"$1",$r->data->content);
+		$r->data->content=str_replace('¶ ','',$r->data->content);
 		$text.=(count($verses)>1?($k>0?' ':'')."$verse ":'').trim($r->data->content);
 	}
 	while(1){
