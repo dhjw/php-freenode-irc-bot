@@ -17,9 +17,14 @@ function plugin_openweathermap(){
 	$r=json_decode($r);
 	print_r($r);
 	if(!empty($r) && !empty($r->cod) && $r->cod==200){
-		// get celsius
-		$celsius=round(($r->main->temp-32)/1.8);
-		$response="{$r->name} ({$r->sys->country}) ".round($r->main->temp)."F/{$celsius}C ".ucfirst($r->weather[0]->description);
+		$response="{$r->name} ({$r->sys->country}) | ".round($r->main->temp)."F/".round(($r->main->temp-32)/1.8)."C | ".ucfirst($r->weather[0]->description);
+		if(isset($r->main->feels_like)) $response.=" | Feels like: "
+.round($r->main->feels_like)."F/".round(($r->main->feels_like-32)/1.8)."C";
+		if(isset($r->main->humidity)) $response.=" | Humidity: ".ucfirst($r->main->humidity)."%";
+		if(isset($r->main->pressure)) $response.=" | Barometer: ".ucfirst($r->main->pressure)."mbar";
+		if(isset($r->wind->speed)) $response.=" | Wind: ".round($r->wind->speed)."kts @ "
+.ucfirst($r->wind->deg)."°";
+		if(isset($r->visibility)) $response.=" | Visibility: ".round($r->visibility/1000*0.621)."mi/".round($r->visibility/1000)."km";
 	} elseif(!empty($r) && isset($r->cod)){
 		$response="{$r->cod}: {$r->message}";
 	} else {
