@@ -939,6 +939,7 @@ while(1){
 				$u_tries=0;
 				while(1){ // extra loop for retries
 					echo "Checking URL: $u\n";
+					$html='';
 
 					// imgur titles by api
 					if(preg_match('#^https?://(?:i\.imgur\.com/(\w*)|imgur\.com/gallery/(\w*))#',$u,$m)){
@@ -979,9 +980,25 @@ while(1){
 					// youtube via api
 					if(!empty($youtube_api_key)){
 						$yt='';
-						if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/watch\?.*v=([a-zA-Z0-9-_]*)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]*)#',$u,$m)) $yt='v';
-						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='c';
-						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]*)/?(\w*)#',$u,$m)) $yt='u';
+						if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/watch\?.*v=([a-zA-Z0-9-_]+)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]+)#',$u,$m)) $yt='v';
+						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='c';
+						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='u';
+						if(empty($yt)){ // custom channel URLs like /example or /c/example require scraping as no API endpoint
+							if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/(?:c/)?([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)){
+								$html=curlget([CURLOPT_URL=>"https://www.youtube.com/{$m[1]}".(!empty($m[2])?"/{$m[2]}":'')]); // force load from youtube so indvidio.us works
+								$dom=new DOMDocument();
+								if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html)){
+									$list=$dom->getElementsByTagName('link');
+									foreach($list as $l) if(!empty($l->attributes->getNamedItem('rel'))&&$l->attributes->getNamedItem('rel')->value=='canonical'){
+										if(preg_match("#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/\w+#",$l->attributes->getNamedItem('href')->value)){
+											$yt='c';
+											$m[1]=substr($l->attributes->getNamedItem('href')->value,strrpos($l->attributes->getNamedItem('href')->value,'/')+1);;
+											break;
+										}
+									}
+								}
+							}
+						}
 						if(!empty($yt)){
 							if($yt=='v') $r=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id={$m[1]}&part=snippet,contentDetails&maxResults=1&type=video&key=$youtube_api_key");
 							elseif($yt=='c' || $yt=='u') $r=file_get_contents("https://www.googleapis.com/youtube/v3/channels?".($yt=='c'?'id':'forUsername')."={$m[1]}&part=id,snippet&maxResults=1&key=$youtube_api_key");
@@ -1425,7 +1442,7 @@ while(1){
 						continue(2);
 					}
 					$title='';
-					$html=str_replace('<<','&lt;&lt;',$html); // rottentomatoes bad title html
+					if(empty($html)) $html=str_replace('<<','&lt;&lt;',$html); // rottentomatoes bad title html
 					$dom=new DOMDocument();
 					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
 						if(!empty($title_og)){
