@@ -934,7 +934,7 @@ while(1){
 				$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
 				foreach($ignore_urls as $v) if(preg_match('#^.*?://'.preg_quote($v).'#',$u)){
 					echo "Ignored URL $v\n";
-					continue;
+					continue(2);
 				}
 				$u_tries=0;
 				while(1){ // extra loop for retries
