@@ -983,6 +983,7 @@ while(1){
 						if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/watch\?.*v=([a-zA-Z0-9-_]+)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]+)#',$u,$m)) $yt='v';
 						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='c';
 						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='u';
+						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/playlist\?.*list=([a-zA-Z0-9-_]+)#',$u,$m)) $yt='p';
 						if(empty($yt)){ // custom channel URLs like /example or /c/example require scraping as no API endpoint
 							if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/(?:c/)?([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)){
 								$html=curlget([CURLOPT_URL=>"https://www.youtube.com/{$m[1]}".(!empty($m[2])?"/{$m[2]}":'')]); // force load from youtube so indvidio.us works
@@ -1002,15 +1003,19 @@ while(1){
 						if(!empty($yt)){
 							if($yt=='v') $r=file_get_contents("https://www.googleapis.com/youtube/v3/videos?id={$m[1]}&part=snippet,contentDetails&maxResults=1&type=video&key=$youtube_api_key");
 							elseif($yt=='c' || $yt=='u') $r=file_get_contents("https://www.googleapis.com/youtube/v3/channels?".($yt=='c'?'id':'forUsername')."={$m[1]}&part=id,snippet&maxResults=1&key=$youtube_api_key");
+							elseif($yt=='p') $r=file_get_contents("https://www.googleapis.com/youtube/v3/playlists?id={$m[1]}&part=snippet&key=$youtube_api_key");
 							$r=json_decode($r);
 							if(empty($r)){
 								send("PRIVMSG $channel :[ Temporary YouTube API error ]\n");
 								continue(2);
-							} elseif($yt=='v' && (empty($m[1]) || $r->pageInfo->totalResults==0)){
+							} elseif($yt=='v' && $r->pageInfo->totalResults==0){
 								send("PRIVMSG $channel :Video does not exist.\n");
 								continue(2);
-							} elseif(($yt=='c' || $yt=='u') && (empty($m[1]) || $r->pageInfo->totalResults==0)){
+							} elseif(($yt=='c' || $yt=='u') && $r->pageInfo->totalResults==0){
 								send("PRIVMSG $channel :".($yt=='c'?'Channel':'User')." does not exist.\n");
+								continue(2);
+							} elseif($yt=='p' && $r->pageInfo->totalResults==0){
+								send("PRIVMSG $channel :Playlist does not exist.\n");
 								continue(2);
 							}
 							$x='';
