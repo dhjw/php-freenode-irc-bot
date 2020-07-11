@@ -980,7 +980,7 @@ while(1){
 					// youtube via api
 					if(!empty($youtube_api_key)){
 						$yt='';
-						if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/watch\?.*v=([a-zA-Z0-9-_]+)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]+)#',$u,$m)) $yt='v';
+						if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/(?:watch\?.*v=|embed/)([a-zA-Z0-9-_]+)#',$u,$m) || preg_match('#^https?://youtu\.be/([a-zA-Z0-9-_]+)#',$u,$m)) $yt='v';
 						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='c';
 						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='u';
 						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/playlist\?.*list=([a-zA-Z0-9-_]+)#',$u,$m)) $yt='p';
@@ -991,9 +991,9 @@ while(1){
 								if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html)){
 									$list=$dom->getElementsByTagName('link');
 									foreach($list as $l) if(!empty($l->attributes->getNamedItem('rel'))&&$l->attributes->getNamedItem('rel')->value=='canonical'){
-										if(preg_match("#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/\w+#",$l->attributes->getNamedItem('href')->value)){
+										if(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/channel/([a-zA-Z0-9-_]+)#',$l->attributes->getNamedItem('href')->value,$m2)){
+											$m[1]=$m2[1];
 											$yt='c';
-											$m[1]=substr($l->attributes->getNamedItem('href')->value,strrpos($l->attributes->getNamedItem('href')->value,'/')+1);;
 											break;
 										}
 									}
