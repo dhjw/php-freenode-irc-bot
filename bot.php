@@ -1987,6 +1987,7 @@ function get_wiki_extract($q,$len=280){
 		}
 		$e=implode("\n",$arr);
 		$e=str_replace(' ()','',$e); // phonetics are often missing from extract
+		$e=preg_replace('/\.((?:\w{2,}|A\ ))/',". $1",$e); // wikipedia seems to omit a space between paragraphs often
 		$e=format_extract($e,$len);
 	}
 	return $e;
