@@ -941,38 +941,29 @@ while(1){
 					echo "Checking URL: $u\n";
 					$html='';
 
-					// imgur titles by api
-					if(preg_match('#^https?://(?:i\.imgur\.com/(\w*)|imgur\.com/gallery/(\w*))#',$u,$m)){
-						if(!empty($m[1])||!empty($m[2])){
+					// imgur via api
+					// single image post ids are usually accessible as an image rather than an album so first check if an image then an album
+					if(!empty($imgur_client_id) && preg_match('#^https?://(i\.)?imgur\.com/(?:(?:gallery|a)/)?(\w+)#',$u,$m)){
 						echo "getting from imgur api..\n";
-							if(!empty($m[1])) $tmp="https://api.imgur.com/3/image/{$m[1]}";
-							elseif(!empty($m[2])) $tmp="https://api.imgur.com/3/album/{$m[2]}";
-							$tmp=curlget([
-								CURLOPT_URL => $tmp,
-								CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")
-							]);
-							$tmp=json_decode($tmp);
-							echo "response=".json_encode($tmp)."\n";
-							$out='';
-							if($tmp->success==1){
-								if(!empty($tmp->data->nsfw)) $out.='NSFW';
-								$tmpd=$tmp->data->description;
-								if(empty($tmpd)) $tmpd=$tmp->data->title;
-								if(!empty($tmpd)){
-									if(!empty($out)) $out.=' - ';
-									$tmpd=str_replace(["\r","\n","\t"],' ',$tmpd);
-									$tmpd=preg_replace('!\s+!',' ',$tmpd);
-									$tmpd=trim(strip_tags($tmpd));
-									$tmpd=str_shorten($tmpd,280);
-									$out.=$tmpd;
-								}
-								if(!empty($out)){
-									$out="[ $out ]";
-									if($title_bold) $out="\x02$out\x02";
-									send("PRIVMSG $channel :$out\n");
-								}
-								// todo: output image size, etc?
-							} else echo "imgur image not found or api fail\n";
+						$r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/image/{$m[2]}",CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")]));
+						if(empty($r)) $r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/album/{$m[2]}",CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")]));
+						if(!empty($r) && $r->success==1){
+							// for i.* direct links default to image description, else default to post title
+							if(!empty($m[1])) if(!empty($r->data->description)) $d=$r->data->description; else $d=$r->data->title; else if(!empty($r->data->title)) $d=$r->data->title; else $d=$r->data->description;
+							// single image posts without an id the same as the first image (i.e. upload two images then delete one) should read first image description
+							if(empty($d) && !empty($r->data->is_album) && count($r->data->images)==1) $d=$r->data->images[0]->description;
+							$o=!empty($r->data->nsfw)?'NSFW':'';
+							if(!empty($d)){
+								$d=str_replace(["\r","\n","\t"],' ',$d);
+								$d=preg_replace('!\s+!',' ',$d);
+								$d=trim(strip_tags($d));
+								$o=str_shorten((!empty($o)?' - ':'').$d,280);
+							}
+							if(!empty($o)){
+								$o="[ $o ]";
+								if($title_bold) $o="\x02$o\x02";
+								send("PRIVMSG $channel :$o\n");
+							} else echo (!empty($m[1])?'image':'post')." exists but no description, skipping output\n";
 							continue(2);
 						}
 					}
