@@ -26,7 +26,7 @@ if(empty($network) || !in_array($network,['freenode','rizon','gamesurge','other'
 	$network='freenode';
 }
 
-$helptxt = "*** $nick $channel !help ***\n\nglobal commands:\n";
+$helptxt="*** $nick $channel !help ***\n\nglobal commands:\n";
 if(isset($custom_triggers)) foreach($custom_triggers as $v) if(isset($v[3])) $helptxt.=" {$v[3]}\n";
 $helptxt.=" !w <term> - search Wikipedia and output a link if something is found
  !g <query> - create and output a Google search link
@@ -86,7 +86,7 @@ if(!isset($help_url)){
 		echo "short help url=$help_url\n";
 		$botdata->help_url_short=$help_url;
 		$botdata->help_text=$helptxt;
-		file_put_contents($datafile, json_encode($botdata));
+		file_put_contents($datafile,json_encode($botdata));
 	}
 }
 
@@ -128,9 +128,9 @@ while(1){
 		// connect loop
 		while(1){
 			$botmask='';
-			if($custom_connect_ip) $socket_options = array('socket' => array('bindto' => "$connect_ip:0")); else $socket_options=[];
-			$socket_context = stream_context_create($socket_options);
-			$socket = stream_socket_client($host, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $socket_context);
+			if($custom_connect_ip) $socket_options=['socket'=>['bindto'=>"$connect_ip:0"]]; else $socket_options=[];
+			$socket_context=stream_context_create($socket_options);
+			$socket=stream_socket_client($host,$errno,$errstr,15,STREAM_CLIENT_CONNECT,$socket_context);
 			echo "* connect errno=$errno errstr=$errstr\n";
 			if(!$socket || $errno<>0){ sleep(15); continue; }
 			stream_set_timeout($socket,$stream_timeout);
@@ -146,7 +146,7 @@ while(1){
 					if(strpos($data,'AUTHENTICATE +')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
 					// if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
 					if(strpos($data,'SASL authentication successful')!==false){ send("CAP END\n"); break; }
-					if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR authenticating with SASL, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
+					if(empty($data) || strpos($data,"ERROR")!==false){ echo "ERROR authenticating with SASL, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 				}
 			}
 			send("NICK $nick\n");
@@ -162,7 +162,7 @@ while(1){
 			while($data=fgets($socket)){
 				echo $data;
 				$ex=explode(' ',trim($data));
-				if($ex[0] == "PING"){
+				if($ex[0]=="PING"){
 					send_no_filter("PONG ".rtrim($ex[1])."\n");
 					continue;
 				}
@@ -171,8 +171,8 @@ while(1){
 					$nick=$orignick.$altchars[rand(0,count($altchars)-1)];
 					continue(2);
 				}
-				if($ex[1]=='376'||$ex[1]=='422') break; // end
-				if(empty($data)||strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
+				if($ex[1]=='376' || $ex[1]=='422') break; // end
+				if(empty($data) || strpos($data,"ERROR")!==false){ echo "ERROR waiting for MOTD, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
 			}
 
 			if(!empty($disable_sasl) && empty($disable_nickserv)){
@@ -248,7 +248,7 @@ while(1){
 				if(!empty($tounban)){
 					$botdata->fyc=array_values($botdata->fyc);
 					$opqueue[]=['-b',$tounban];
-					file_put_contents($datafile, json_encode($botdata));
+					file_put_contents($datafile,json_encode($botdata));
 					getops();
 				}
 			}
@@ -267,7 +267,7 @@ while(1){
 				if(!empty($tounban)){
 					$botdata->tq=array_values($botdata->tq);
 					// $opqueue[]=['-q',$tounban];
-					file_put_contents($datafile, json_encode($botdata));
+					file_put_contents($datafile,json_encode($botdata));
 					// getops();
 					foreach($tounban as $who){
 						if(strpos($who,"!")===false) $who.='!*@*';
@@ -287,7 +287,7 @@ while(1){
 		}
 
 		// get botmask from WHOIS on connect
-		if($ex[1] == '311'){
+		if($ex[1]=='311'){
 			if($ex[2]==$nick){
 				$botmask=$ex[5];
 				echo "Detected botmask: $botmask\n";
@@ -327,14 +327,14 @@ while(1){
 		}
 
 		// ping pong
-		if($ex[0] == "PING"){
+		if($ex[0]=="PING"){
 			send_no_filter("PONG ".rtrim($ex[1])."\n");
 			if(!$in_channel) send("JOIN $channel\n");
 			continue;
 		}
 
 		// got ops, run op queue
-		if(trim($data) == ":ChanServ!ChanServ@services. MODE $channel +o $nick"){
+		if(trim($data)==":ChanServ!ChanServ@services. MODE $channel +o $nick"){
 			echo "Got ops, running op queue\n";
 			print_r($opqueue);
 			$opped=true;
@@ -429,13 +429,13 @@ while(1){
 
 		// admin triggers
 		if(!empty($trigger) && substr($trigger,0,1)=='!' && isadmin()){
-			if ($trigger == '!s' || $trigger == '!say') {
+			if ($trigger=='!s' || $trigger=='!say') {
 				send( "PRIVMSG $channel :$args \n");
 				continue;
-			} elseif ($trigger == '!e' || $trigger == '!emote') {
+			} elseif ($trigger=='!e' || $trigger=='!emote') {
 				send( "PRIVMSG $channel :".pack('C',0x01)."ACTION $args".pack('C',0x01)."\n");
 				continue;
-			} elseif($trigger == '!ban' || $trigger == '!b'){
+			} elseif($trigger=='!ban' || $trigger=='!b'){
 				// if there's a space get the ban reason and use it for remove
 				if(strpos($args,' ')!==false) $reason=substr($args,strpos($args,' ')+1); else $reason="Goodbye.";
 				list($mask)=explode(' ',$args);
@@ -455,10 +455,10 @@ while(1){
 				echo "Ban $mask\n";
 				$opqueue[]=['+b',[$mask,$reason,$tmpnick]];
 				getops();
-			} elseif($trigger == '!unban' || $trigger == '!ub'){
+			} elseif($trigger=='!unban' || $trigger=='!ub'){
 				$opqueue[]=['-b',explode(' ',$args)];
 				getops();
-			} elseif(($trigger == '!quiet' || $trigger == '!q') && $network=='freenode'){
+			} elseif(($trigger=='!quiet' || $trigger=='!q') && $network=='freenode'){
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
 					$timed=1;
@@ -487,7 +487,7 @@ while(1){
 					// todo: +q instead of chanserv quiet for 'other' network, and enable !q
 				}
 				continue;
-			} elseif(($trigger == '!removequiet' || $trigger == '!rq') && $network=='freenode'){ // shadowquiet when channel +z
+			} elseif(($trigger=='!removequiet' || $trigger=='!rq') && $network=='freenode'){ // shadowquiet when channel +z
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
 					$timed=1;
@@ -514,16 +514,16 @@ while(1){
 				}
 				echo "Quiet $who, timed=$timed tqtime=$tqtime\n";
 				$who=str_replace('@gateway/web/freenode/ip.','@',$who);
-				$opqueue[]=['remove_quiet',$who,['nick'=>$thenick, 'msg'=>$m, 'timed'=>$timed, 'tqtime'=>$tqtime]];
+				$opqueue[]=['remove_quiet',$who,['nick'=>$thenick,'msg'=>$m,'timed'=>$timed,'tqtime'=>$tqtime]];
 				getops();
 				continue;
-			} elseif(($trigger == '!unquiet' || $trigger == '!uq') && $network=='freenode'){
+			} elseif(($trigger=='!unquiet' || $trigger=='!uq') && $network=='freenode'){
 				// $opqueue[]=['-q',explode(' ',$args)];
 				// getops();
 				send("PRIVMSG chanserv :UNQUIET $channel $args\n");
 				continue;
 				// todo: -q instead of chanserv unquiet for 'other' network, and enable !uq
-			} elseif($trigger == '!fyc' && $network=='freenode'){
+			} elseif($trigger=='!fyc' && $network=='freenode'){
 				// check if mins provided
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
@@ -547,24 +547,24 @@ while(1){
 				$opqueue[]=['fyc',[$mask,$fyctime]];
 				getops();
 				continue;
-			} elseif($trigger == '!t' || $trigger == '!topic'){
+			} elseif($trigger=='!t' || $trigger=='!topic'){
 				if(in_array($network,['freenode','gamesurge','rizon'])) send("PRIVMSG ChanServ :TOPIC $channel $args\n");
 				else {
 					$opqueue[]=['topic',null,['msg'=>$args]];
 					getops();
 				}
 				continue;
-			} elseif($trigger == '!die'){
+			} elseif($trigger=='!die'){
 				send("QUIT :".(!empty($args)?$args:'shutdown')."\n");
 				exit;
-			} elseif($trigger == '!k' || $trigger == '!kick'){
+			} elseif($trigger=='!k' || $trigger=='!kick'){
 				$arr=explode(' ',$args);
 				if(empty($arr)) continue;
 				if($arr[1]) $m=substr($args,strpos($args,' ')+1); else $m=false;
 				$opqueue[]=['kick',$arr[0],['msg'=>$m]];
 				getops();
 				continue;
-			}  elseif(($trigger == '!r' || $trigger == '!remove') && $network=='freenode'){
+			}  elseif(($trigger=='!r' || $trigger=='!remove') && $network=='freenode'){
 				$arr=explode(' ',$args);
 				if(empty($arr)) continue;
 				if($arr[1]) $m=substr($args,strpos($args,' ')+1); else $m=false;
@@ -572,18 +572,18 @@ while(1){
 				$opqueue[]=['remove',$arr[0],['msg'=>$m]];
 				getops();
 				continue;
-			} elseif($trigger == '!nick'){
+			} elseif($trigger=='!nick'){
 				if(empty($args)) continue;
 				send("NICK $args\n");
 				continue;
-			} elseif($trigger == '!invite'){
+			} elseif($trigger=='!invite'){
 				$arr=explode(' ',$args);
 				$opqueue[]=['invite',$arr[0]];
 				getops();
 				continue;
-			} elseif($trigger == '!restart'){
+			} elseif($trigger=='!restart'){
 				dorestart($args);
-			} elseif($trigger == '!update'){
+			} elseif($trigger=='!update'){
 				$r=curlget([CURLOPT_URL=>'https://raw.githubusercontent.com/dhjw/php-freenode-irc-bot/master/bot.php']);
 				if(empty($r)){
 					send("PRIVMSG $privto :Error downloading update\n");
@@ -599,7 +599,7 @@ while(1){
 				}
 				send("PRIVMSG $privto :Update installed. See https://bit.ly/bupd8 for changes. Restarting\n");
 				dorestart(!empty($args)?$args:'update');
-			} elseif($trigger == '!raw'){
+			} elseif($trigger=='!raw'){
 				send("$args\n");
 				continue;
 			}
@@ -625,12 +625,12 @@ while(1){
 		// global triggers
 		if(!empty($trigger) && substr($trigger,0,1)=='!' && !$disable_triggers){
 			if($ex[2]==$nick) $privto=$incnick; else $privto=$channel; // allow PM response
-			if($trigger == '!help'){
+			if($trigger=='!help'){
 				// foreach(explode("\n",$helptxt) as $line){ send("PRIVMSG $incnick :$line\n"); sleep(1); }
 				if(!empty($help_url) && empty($disable_help)) send("PRIVMSG $incnick :Please visit $help_url\n");
 				else send("PRIVMSG $privto :Help disabled\n");
 				continue;
-			} elseif($trigger == '!w' || $trigger == '!wiki'){
+			} elseif($trigger=='!w' || $trigger=='!wiki'){
 				if(empty($args)) continue;
 				$u="https://en.wikipedia.org/w/index.php?search=".urlencode($args);
 				for($i=$num_file_get_retries;$i>0;$i--){
@@ -644,7 +644,7 @@ while(1){
 						$nooutput=true;
 						continue;
 					}
-					$url = $curl_info['EFFECTIVE_URL'];
+					$url=$curl_info['EFFECTIVE_URL'];
 
 					if(strstr($response,'wgInternalRedirectTargetUrl')!==false){
 						echo "getting internal/actual wiki url.. ";
@@ -673,7 +673,7 @@ while(1){
 				if(!$nooutput) send("PRIVMSG $privto :$url\n");
 				continue;
 				// Google
-			} elseif($trigger == '!g' || $trigger == '!i' || $trigger == '!g-' || $trigger == '!google'){
+			} elseif($trigger=='!g' || $trigger=='!i' || $trigger=='!g-' || $trigger=='!google'){
 				if(empty($args)) continue;
 				if($trigger=='!g-'){
 					send("PRIVMSG $privto :http://lmgtfy.com/?q=".urlencode($args)."\n");
@@ -682,13 +682,13 @@ while(1){
 				if($trigger=='!g' || $trigger=='!google') $tmp='search'; else $tmp='images';
 				send("PRIVMSG $privto :https://www.google.com/$tmp?q=".urlencode($args)."\n");
 				continue;
-			} elseif($trigger == '!ddg' || $trigger == '!ddi' || $trigger == '!dg' || $trigger == '!di'){
+			} elseif($trigger=='!ddg' || $trigger=='!ddi' || $trigger=='!dg' || $trigger=='!di'){
 				// DDG
 				if(empty($args)) continue;
 				if($trigger=='!ddi' || $trigger=='!di') $tmp="&iax=1&ia=images"; else $tmp='';
 				send("PRIVMSG $privto :https://duckduckgo.com/?q=".urlencode($args)."$tmp\n");
 				continue;
-			} elseif($trigger == '!yt'){
+			} elseif($trigger=='!yt'){
 				if(empty($args)){
 					send("PRIVMSG $privto :Provide a query.\n");
 					continue;
@@ -721,9 +721,9 @@ while(1){
 				send("PRIVMSG $privto :https://youtu.be/$v | $title$ytextra\n");
 				continue;
 			}// OMDB, check for movie or series only (no episode or game)
-			elseif($trigger == '!m'){
+			elseif($trigger=='!m'){
 				echo "Searching OMDB.. ";
-				ini_set('default_socket_timeout', 30);
+				ini_set('default_socket_timeout',30);
 				// by id only
 				$tmp=rtrim($ex[4]);
 				if(substr($tmp,0,2)=='tt'){
@@ -770,7 +770,7 @@ while(1){
 				if($tmp->Type=='movie') $tmp3=''; else $tmp3=" {$tmp->Type}";
 				if(isset($tmp->Response)) send("PRIVMSG $privto :\xe2\x96\xb6 {$tmp->Title} ({$tmp->Year}$tmp3) | {$tmp->Genre} | {$tmp->Actors} | \"{$tmp->Plot}\" http://www.imdb.com/title/{$tmp->imdbID}/ [{$tmp->imdbRating}]\n"); else send("PRIVMSG $privto :OMDB API error.\n");
 				continue;
-			} elseif($trigger == '!tr' || $trigger == '!translate'){
+			} elseif($trigger=='!tr' || $trigger=='!translate'){
 				// google translate, requires gcloud commandline tool to be installed
 				echo "Translating.. ";
 				// check limit
@@ -787,7 +787,7 @@ while(1){
 				passthru("gcloud auth activate-service-account --key-file=$gcloud_translate_keyfile");
 				$tmp2=rtrim(shell_exec("gcloud auth print-access-token"));
 				$words=explode(' ',$args);
-				if(strpos($words[0],'-')!==false&&strlen($words[0])==5){
+				if(strpos($words[0],'-')!==false && strlen($words[0])==5){
 					list($source,$target)=explode('-',$words[0]);
 					if($source=='jp') $source='ja'; if($target=='jp') $target='ja';
 					unset($words[0]);
@@ -818,17 +818,17 @@ while(1){
 				$botdata->translate_char_cnt[$ym]+=strlen($args);
 				file_put_contents($datafile,json_encode($botdata));
 				continue;
-			} elseif($trigger == '!cc'){
+			} elseif($trigger=='!cc'){
 				// currency converter
 				echo "Converting currency..\n";
-				$ex=explode(' ', trim(str_ireplace(' in ',' ',$data)));
+				$ex=explode(' ',trim(str_ireplace(' in ',' ',$data)));
 				if(empty($ex[4]) || empty($ex[5]) || empty($ex[6]) || !empty($ex[7])){ send("PRIVMSG $privto :Usage: !cc <amount> <from_currency> <to_currency>\n"); continue; }
 				$ex[count($ex)-1]=rtrim($ex[count($ex)-1]); // todo: do this globally at beginning
-				$ex[4]=(float) preg_replace("#[^0-9.]#","",$ex[4]); // strip non numeric
-				$ex[5]=strtoupper(preg_replace("#[^a-zA-Z]#","",$ex[5])); // strip non alpha
-				$ex[6]=strtoupper(preg_replace("#[^a-zA-Z]#","",$ex[6]));
-				if($ex[5]=='BTC') $tmp1=strlen(substr(strrchr($ex[4], "."), 1)); else $tmp1=2; // precision1
-				if($ex[6]=='BTC'){ $tmp2=strlen(substr(strrchr($ex[4], "."), 1)); if($tmp2<5) $tmp2=5; } else $tmp2=2; // precision2
+				$ex[4]=(float)preg_replace('/[^0-9.]/','',$ex[4]); // strip non numeric
+				$ex[5]=strtoupper(preg_replace('/[^a-zA-Z]/','',$ex[5])); // strip non alpha
+				$ex[6]=strtoupper(preg_replace('/[^a-zA-Z]/','',$ex[6]));
+				if($ex[5]=='BTC') $tmp1=strlen(substr(strrchr($ex[4],'.'), 1)); else $tmp1=2; // precision1
+				if($ex[6]=='BTC'){ $tmp2=strlen(substr(strrchr($ex[4],'.'), 1)); if($tmp2<5) $tmp2=5; } else $tmp2=2; // precision2
 				echo "ex4={$ex[4]} from={$ex[5]} to={$ex[6]} precision=$tmp1 time=$time cclast=$cclast\n";
 				if($ex[5]==$ex[6]){ send("PRIVMSG $privto :A wise guy, eh?\n"); continue; }
 				if(empty($cccache) || $time-$cclast>=300){ // cache results for 5 mins
@@ -849,7 +849,7 @@ while(1){
 					send("PRIVMSG $privto :".number_format($ex[4],$tmp1)." {$ex[5]} = ".number_format(($ex[4]/$tmp3),$tmp2)." {$ex[6]} (".make_bitly_url("https://finance.yahoo.com/quote/{$ex[5]}{$ex[6]}=X").")\n");
 				} else send("PRIVMSG $privto :Finance API error.\n");
 				continue;
-			} elseif($trigger == '!wa'){
+			} elseif($trigger=='!wa'){
 				$u="http://api.wolframalpha.com/v2/query?input=".urlencode($args)."&output=plaintext&appid={$wolfram_appid}";
 				try {
 					$xml=new SimpleXMLElement(file_get_contents($u));
@@ -864,7 +864,7 @@ while(1){
 					else send("PRIVMSG $privto :".trim(str_replace("\n",' • ',$xml->pod[1]->subpod->plaintext))."\n");
 				} else send("PRIVMSG $privto :Data not available.\n");
 				continue;
-			} elseif($trigger == '!ud'){
+			} elseif($trigger=='!ud'){
 				// urban dictionary
 				if(empty($args)){ send("PRIVMSG $privto :Provide a term to define.\n"); continue; }
 				$a=explode(' ',$args);
@@ -882,7 +882,7 @@ while(1){
 				if(empty($r) || empty($r->list[0])){ send("PRIVMSG $privto :Term not found.\n"); continue; }
 				if(empty($r->list[$num])){ send("PRIVMSG $privto :Definition not found.\n"); continue; }
 				$d=str_replace(["\r","\n","\t"],' ',$r->list[$num]->definition);
-				$d=trim(preg_replace("/\s+/",' ',str_replace(["[","]"],'',$d)));
+				$d=trim(preg_replace('/\s+/',' ',str_replace(["[","]"],'',$d)));
 				$d=str_replace(' .','.',$d);
 				$d=str_replace(' ,',',',$d);
 				$d=str_shorten($d,360);
@@ -890,28 +890,28 @@ while(1){
 				if(strtolower($r->list[$num]->word)<>strtolower($q)) $d="({$r->list[$num]->word}) $d";
 				$d.=' '.make_bitly_url($r->list[0]->permalink);
 				send("PRIVMSG $privto :$d\n");
-			} elseif($trigger == '!flip'){
+			} elseif($trigger=='!flip'){
 				$tmp=get_true_random(0,1);
 				if($tmp==0) $tmp='heads'; else $tmp='tails';
 				send("PRIVMSG $privto :".pack('C',0x01)."ACTION flips a coin, which lands \x02$tmp\x02 side up.".pack('C',0x01)."\n");
 				continue;
-			} elseif($trigger == '!8' || $trigger == '!8ball'){
+			} elseif($trigger=='!8' || $trigger=='!8ball'){
 				$answers=["It is certain","It is decidedly so","Without a doubt","Yes definitely","You may rely on it","As I see it, yes","Most likely","Outlook good","Yes","Signs point to yes","Signs point to no","No","Nope","Absolutely not","Heck no","Don't count on it","My reply is no","My sources say no","Outlook not so good","Very doubtful"];
 				$tmp=get_true_random(0,count($answers)-1);
 				send("PRIVMSG $privto :{$answers[$tmp]}\n");
 				continue;
-			} elseif($trigger == '!f' || $trigger == '!fortune'){
+			} elseif($trigger=='!f' || $trigger=='!fortune'){
 				// expects /usr/games/fortune to be installed
 				echo "Getting fortune..\n";
-				$args=trim(preg_replace("/[^[:alnum:][:space:]\-\/]/u",'',$args));
+				$args=trim(preg_replace('#[^[:alnum:][:space:]-/]#u','',$args));
 				for($i=0;$i<2;$i++){
-				        $f=trim(preg_replace('!\s+!',' ',str_replace("\n",' ',shell_exec("/usr/games/fortune -s '$args' 2>&1"))));
+				        $f=trim(preg_replace('/\s+/',' ',str_replace("\n",' ',shell_exec("/usr/games/fortune -s '$args' 2>&1"))));
 				        if($f=='No fortunes found'){ echo "Fortune type not found, getting from all.\n"; $args=''; continue; }
 				        break;
 				}
 				send("PRIVMSG $privto :$f\n");
 				continue;
-			} elseif($trigger == '!rand'){
+			} elseif($trigger=='!rand'){
 				echo "Getting random numbers, min={$ex[4]} max={$ex[5]} cnt={$ex[6]}\n";
 				if(!is_numeric($ex[4]) || !is_numeric(trim($ex[5]))){
 					send("PRIVMSG $privto :Please provide two numbers for min and max. e.g. !rand 1 5\n");
@@ -919,7 +919,7 @@ while(1){
 				}
 				send("PRIVMSG $privto :".get_true_random($ex[4],$ex[5],!empty($ex[6])?$ex[6]:1)."\n");
 				continue;
-			} elseif($trigger == '!insult'){
+			} elseif($trigger=='!insult'){
 				if(!empty(trim($ex[4]))) $target=trim($ex[4]).': '; else $target='';
 				send("PRIVMSG $channel :$target".s_insult()."\n");
 				continue;
@@ -945,8 +945,8 @@ while(1){
 					// single image post ids are usually accessible as an image rather than an album so first check if an image then an album
 					if(!empty($imgur_client_id) && preg_match('#^https?://(i\.)?imgur\.com/(?:(?:gallery|a)/)?(\w+)#',$u,$m)){
 						echo "getting from imgur api..\n";
-						$r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/image/{$m[2]}",CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")]));
-						if(empty($r)) $r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/album/{$m[2]}",CURLOPT_HTTPHEADER => array("Authorization: Client-ID $imgur_client_id")]));
+						$r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/image/{$m[2]}",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
+						if(empty($r)) $r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/album/{$m[2]}",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
 						if(!empty($r) && $r->success==1){
 							// for i.* direct links default to image description, else default to post title
 							if(!empty($m[1])) if(!empty($r->data->description)) $d=$r->data->description; else $d=$r->data->title; else if(!empty($r->data->title)) $d=$r->data->title; else $d=$r->data->description;
@@ -955,7 +955,7 @@ while(1){
 							$o=!empty($r->data->nsfw)?'NSFW':'';
 							if(!empty($d)){
 								$d=str_replace(["\r","\n","\t"],' ',$d);
-								$d=preg_replace('!\s+!',' ',$d);
+								$d=preg_replace('/\s+/',' ',$d);
 								$d=trim(strip_tags($d));
 								$o=str_shorten((!empty($o)?' - ':'').$d,280);
 							}
@@ -981,7 +981,7 @@ while(1){
 								$dom=new DOMDocument();
 								if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html)){
 									$list=$dom->getElementsByTagName('link');
-									foreach($list as $l) if(!empty($l->attributes->getNamedItem('rel'))&&$l->attributes->getNamedItem('rel')->value=='canonical'){
+									foreach($list as $l) if(!empty($l->attributes->getNamedItem('rel')) && $l->attributes->getNamedItem('rel')->value=='canonical'){
 										if(preg_match('#^https?://(?:www\.|m\.)?youtube\.com/channel/([a-zA-Z0-9-_]+)#',$l->attributes->getNamedItem('href')->value,$m2)){
 											$m[1]=$m2[1];
 											$yt='c';
@@ -1018,7 +1018,7 @@ while(1){
 									$x=' - '.ucfirst($m[2]);
 								} elseif(!empty($r->items[0]->snippet->description)){
 									$d=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$r->items[0]->snippet->description);
-									$x=' - '.str_shorten(trim(preg_replace('!\s+!',' ',$d)),148);
+									$x=' - '.str_shorten(trim(preg_replace('/\s+/',' ',$d)),148);
 								}
 							}
 							$t="[ {$r->items[0]->snippet->title}$x ]";
@@ -1048,7 +1048,7 @@ while(1){
 									$e=$r['query']['pages'][$k[0]]['imageinfo'][0]['extmetadata']['ImageDescription']['value'];
 									$e=strip_tags($e);
 									$e=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$e); // nbsp
-									$e=preg_replace('!\s+!',' ',$e);
+									$e=preg_replace('/\s+/',' ',$e);
 									$e=trim($e);
 									$e=str_shorten($e,280);
 								}
@@ -1200,7 +1200,7 @@ while(1){
 									}
 									$t=str_replace(["\r\n","\n","\t"],' ',$t);
 									$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
-									$t=trim(preg_replace('!\s+!',' ',$t));
+									$t=trim(preg_replace('/\s+/',' ',$t));
 									$t=str_shorten($t,438);
 									$t="[ {$r->user->name}: $t ]";
 									if($title_bold) $t="\x02$t\x02";
@@ -1227,12 +1227,12 @@ while(1){
 										}
 										$d=str_replace(["\r\n","\n","\t"],' ',$d);
 										$d=html_entity_decode($d,ENT_QUOTES | ENT_HTML5,'UTF-8');
-										$d=trim(preg_replace('!\s+!',' ',$d));
+										$d=trim(preg_replace('/\s+/',' ',$d));
 										$t.=" | $d";
 									}
 									if(!empty($r->url)){
 										$u=$r->entities->url->urls[0]->expanded_url;
-										$u=preg_replace("#^(https?://[^/]*?)/$#","$1",$u); // strip trailing slash on domain-only links
+										$u=preg_replace('#^(https?://[^/]*?)/$#',"$1",$u); // strip trailing slash on domain-only links
 										$t.=" | $u";
 									}
 									$t="[ $t ]";
@@ -1265,7 +1265,7 @@ while(1){
 								// get title
 								if(!empty($r->title)){
 									$tmp2=str_replace(["\r\n","\n","\t"],' ',$r->title);
-									$tmp2=trim(preg_replace('!\s+!',' ',$tmp2));
+									$tmp2=trim(preg_replace('/\s+/',' ',$tmp2));
 									$tmp2=str_shorten($tmp2,280);
 									$t="[ $tmp: $tmp2 ]";
 								} else {
@@ -1295,10 +1295,10 @@ while(1){
 							$a=$n->textContent;
 							list($n)=$x->query('//*[@id="post--content"]/p');
 							$b=$n->textContent;
-							if(!empty($a)&&!empty($b)){
+							if(!empty($a) && !empty($b)){
 								$t=strip_tags(html_entity_decode("$a: $b",ENT_QUOTES | ENT_HTML5,'UTF-8'));
 								$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$t);
-								$t=trim(preg_replace('!\s+!',' ',$t));
+								$t=trim(preg_replace('/\s+/',' ',$t));
 								$t=str_shorten($t,424,['less'=>13]);
 								// seems to randomly show post image or require login, require login for all links, randomly show author avatar if no image, may not display link/media even if it exists, and cant tell between links or media..  which is dumb. so we'll just add (link/media) when its clear there's a link or media and skip avatar images
 								list($n)=$x->query('//*[@id="media-placeholder--wrapper"]');
@@ -1336,9 +1336,9 @@ while(1){
 					if(!empty($twitch_client_id) && preg_match('#https?://(?:www\.)?twitch\.tv/(\w+)(/\w+)?#',$u,$m)){
 						// get token, don't revalidate because won't be revoked - https://dev.twitch.tv/docs/authentication
 						echo "Getting Twitch token.. ";
-						if(empty($twitch_token)||$twitch_token_expires<time()){
+						if(empty($twitch_token) || $twitch_token_expires<time()){
 							$r=json_decode(curlget([CURLOPT_URL=>"https://id.twitch.tv/oauth2/token?client_id=$twitch_client_id=&client_secret=$twitch_client_secret&grant_type=client_credentials",CURLOPT_POST=>1,CURLOPT_HTTPHEADER=>["Client-ID: $twitch_client_id"]]));
-							if(!empty($r)&&!empty($r->access_token)){
+							if(!empty($r) && !empty($r->access_token)){
 								echo "ok.\n";
 								$twitch_token=$r->access_token;
 								$twitch_token_expires=time()+$r->expires_in-30;
@@ -1356,7 +1356,7 @@ while(1){
 							// get user info - https://dev.twitch.tv/docs/api/reference#get-users
 							echo "Getting user info for \"{$m[1]}\".. ";
 							$r=json_decode(curlget([CURLOPT_URL=>"https://api.twitch.tv/helix/users?login={$m[1]}",CURLOPT_HTTPHEADER=>["Client-ID: $twitch_client_id","Authorization: Bearer $twitch_token"]]));
-							if(!empty($r)&&isset($r->data)){
+							if(!empty($r) && isset($r->data)){
 								if(isset($r->data[0])){
 									echo "ok.\n";
 									$un=$r->data[0]->display_name;
@@ -1371,13 +1371,13 @@ while(1){
 										// get live stream info - https://dev.twitch.tv/docs/api/reference#get-streams-metadata
 										echo "Getting live stream info.. ";
 										$r=json_decode(curlget([CURLOPT_URL=>"https://api.twitch.tv/helix/streams?user_login={$m[1]}",CURLOPT_HTTPHEADER=>["Client-ID: $twitch_client_id","Authorization: Bearer $twitch_token"]]));
-										if(!empty($r)&&isset($r->data)){
+										if(!empty($r) && isset($r->data)){
 											if(count($r->data)>0){
 												// check for live stream
 												foreach($r->data as $d) if($d->type=='live'){
 													echo "ok.\n";
 													$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$d->title);
-													$t=trim(preg_replace('!\s+!',' ',$t));
+													$t=trim(preg_replace('/\s+/',' ',$t));
 													$t=str_shorten($t,424);
 													$t="[ $t ]";
 													if($title_bold) $t="\x02$t\x02";
@@ -1388,7 +1388,7 @@ while(1){
 											// no streams, show user info
 											echo "not streaming\n";
 											$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',"$un: $ud");
-											$t=trim(preg_replace('!\s+!',' ',$t));
+											$t=trim(preg_replace('/\s+/',' ',$t));
 											$t=str_shorten($t,424);
 											$t="[ $t ]";
 											if($title_bold) $t="\x02$t\x02";
@@ -1457,16 +1457,16 @@ while(1){
 					// echo "orig title= ".print_r($title,true)."\n";
 					$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 					// strip numeric entities that don't seem to display right on IRC when converted
-					$title=preg_replace("/(&#[0-9]+;)/",'', $title);
+					$title=preg_replace('/(&#[0-9]+;)/','',$title);
 					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet'];
 					$title=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$title);
-					$title=trim(preg_replace('!\s+!', ' ', $title));
+					$title=trim(preg_replace('/\s+/',' ',$title));
 					foreach($notitletitles as $ntt) if($title==$ntt) continue(3);
 					foreach($title_replaces as $k=>$v) $title=str_replace($k,$v,$title);
-					// if(!$title) $title = 'No title found.';
+					// if(!$title) $title='No title found.';
 					if(strpos($u,'//twitter.com/')!==false) $title=str_replace_one(' on Twitter: "',': "',$title);
 					if($title && $outline){
-						preg_match("/<span class=\"publication\">.*?>(.*)›.*<\/span>/",$html,$m);
+						preg_match('#<span class="publication">.*?>(.*)›.*?</span>#',$html,$m);
 						if(!empty($m[1])) $title.=' - '.trim($m[1]);
 					}
 					$title=str_shorten($title,438);
@@ -1490,8 +1490,8 @@ while(1){
 			// process all PRIVMSG to $channel
 			if($ex[1]=='PRIVMSG' && $ex[2]==$channel){
 				list($tmpnick,$tmphost)=parsemask($ex[0]);
-				$flood_lines[] = [$tmphost,$msg,microtime()];
-				if(count($flood_lines)>$flood_max_buffer_size) $tmp = array_shift($flood_lines);
+				$flood_lines[]=[$tmphost,$msg,microtime()];
+				if(count($flood_lines)>$flood_max_buffer_size) $tmp=array_shift($flood_lines);
 
 				// if X consequtive lines by one person, quiet for X secs
 				if(count($flood_lines)>=$flood_max_conseq_lines){
@@ -1539,28 +1539,28 @@ function curlget($opts=[]){
 	global $custom_curl_iface,$curl_iface,$user_agent,$allow_invalid_certs,$curl_response,$curl_info,$curl_error;
 	$curl_response='';
 	$ch=curl_init();
-	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-	if($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-	curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookiefile.txt');
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	// curl_setopt($ch, CURLOPT_VERBOSE, 1);
-	// curl_setopt($ch, CURLOPT_HEADER, 1);
-	curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
-	if(!empty($allow_invalid_certs)) curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_ENCODING, ''); // avoid gzipped result per http://stackoverflow.com/a/28295417
+	curl_setopt($ch,CURLOPT_IPRESOLVE,CURL_IPRESOLVE_V4);
+	curl_setopt($ch,CURLOPT_CONNECTTIMEOUT,15);
+	curl_setopt($ch,CURLOPT_TIMEOUT,15);
+	if($custom_curl_iface) curl_setopt($ch,CURLOPT_INTERFACE,$curl_iface);
+	curl_setopt($ch,CURLOPT_USERAGENT,$user_agent);
+	curl_setopt($ch,CURLOPT_COOKIEFILE,'cookiefile.txt');
+	curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+	curl_setopt($ch,CURLOPT_FOLLOWLOCATION,true);
+	// curl_setopt($ch,CURLOPT_VERBOSE,1);
+	// curl_setopt($ch,CURLOPT_HEADER,1);
+	curl_setopt($ch,CURLOPT_MAXREDIRS,7);
+	if(!empty($allow_invalid_certs)) curl_setopt($ch,CURLOPT_SSL_VERIFYPEER,false);
+	curl_setopt($ch,CURLOPT_ENCODING,''); // avoid gzipped result per http://stackoverflow.com/a/28295417
 	$default_header=[];
 	/*$default_header=[ // seem to help some servers
 		'Connection: keep-alive',
 		'Upgrade-Insecure-Requests: 1',
 		'Accept-Language: en'
 	];
-	curl_setopt($ch, CURLOPT_HTTPHEADER, $header);*/
+	curl_setopt($ch,CURLOPT_HTTPHEADER,$header);*/
 	// partially read big connections per https://stackoverflow.com/a/17641159
-	curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($handle,$data){
+	curl_setopt($ch,CURLOPT_WRITEFUNCTION,function($handle,$data){
 		global $curl_response;
 		$curl_response.=$data;
 		if(strlen($curl_response)>1048576){ // up to 768KB required for amazon link titles
@@ -1679,7 +1679,7 @@ function getops(){
 
 $last_send='';
 function send($a){
-        global $socket, $stream_timeout, $skip_dupe_output, $last_send;
+        global $socket,$stream_timeout,$skip_dupe_output,$last_send;
         if($skip_dupe_output){ if($a==$last_send) return; else $last_send=$a; }
         echo "> $a";
         fputs($socket,"$a");
@@ -1687,7 +1687,7 @@ function send($a){
 }
 
 function send_no_filter($a){
-        global $socket, $stream_timeout;
+        global $socket,$stream_timeout;
         echo "> $a";
         fputs($socket,"$a");
         if(timedout()) return false;
@@ -1716,7 +1716,7 @@ function make_bitly_url($url){
 			'Accept: application/json'
 		]
 	]));
-	if(!isset($r->id)||empty($r->id)){
+	if(!isset($r->id) || empty($r->id)){
 		echo 'Bitly error. Response: '.print_r($r,true);
 		return $url;
 	}
@@ -1744,7 +1744,7 @@ function get_base_domain($d){
 				$f="// Source: https://publicsuffix.org/list/ (modified) License: https://mozilla.org/MPL/2.0/\n";
 				while(!feof($fp)){
 					$l=fgets($fp,1024);
-					if(substr($l,0,2)=='//'||$l=="\n") continue;
+					if(substr($l,0,2)=='//' || $l=="\n") continue;
 					elseif(substr($l,0,2)=='*.') $l=substr($l,2);
 					elseif(substr($l,0,1)=='!') $l=substr($l,1);
 					$f.=$l;
@@ -1764,7 +1764,7 @@ function get_base_domain($d){
 	$n=substr_count($d,'.');
 	for($i=0;$i<=$n;$i++){
 		if(in_array($c,$public_suffixes)){
-			if(substr($c,0,4)=='www.'&&$d<>"www.$c") $c=preg_replace('/^www\./','',$c); // strip www if not main domain
+			if(substr($c,0,4)=='www.' && $d<>"www.$c") $c=preg_replace('/^www\./','',$c); // strip www if not main domain
 			return "$l.$c";
 		}
 		$l=substr($c,0,strpos($c,'.'));
@@ -1774,12 +1774,12 @@ function get_base_domain($d){
 }
 
 function dorestart($msg,$sendquit=true){
-	global $_, $argv;
+	global $_,$argv;
 	echo "Restarting...\n";
-	$_ = $_SERVER['_'];
+	$_=$_SERVER['_'];
 	register_shutdown_function(function(){
-		global $_, $argv;
-		pcntl_exec($_, $argv);
+		global $_,$argv;
+		pcntl_exec($_,$argv);
 	});
 	if(empty($msg)) $msg='restart';
 	if($sendquit) send("QUIT :$msg\n");
@@ -1835,9 +1835,9 @@ function check_dnsbl($nick,$host,$skip=false){
 			 'dnsbl.sorbs.net',
 			 'bl.spamcop.net'];
 	// ip check
-	if(substr($host,0,8)=='gateway/' && strpos($host,'/ip.') !== false) $ip=gethostbyname(substr($host,strpos($host,'/ip.')+4));
+	if(substr($host,0,8)=='gateway/' && strpos($host,'/ip.')!==false) $ip=gethostbyname(substr($host,strpos($host,'/ip.')+4));
 	else $ip=gethostbyname($host);
-	if(filter_var($ip, FILTER_VALIDATE_IP) !== false){
+	if(filter_var($ip,FILTER_VALIDATE_IP)!==false){
 		echo "IP $ip detected.\n";
 		echo ".. checking against ".count($dnsbls)." DNSBLs\n";
 		$rip=implode('.',array_reverse(explode('.',$ip)));
@@ -1869,16 +1869,16 @@ function check_blacklist($nick,$host){
 	echo "Checking blacklist, nick: $nick host: $host\n";
 
 	// ip check
-	if(substr($host,0,8)=='gateway/' && strpos($host,'/ip.') !== false) $ip=gethostbyname(substr($host,strpos($host,'/ip.')+4));
+	if(substr($host,0,8)=='gateway/' && strpos($host,'/ip.')!==false) $ip=gethostbyname(substr($host,strpos($host,'/ip.')+4));
 	else $ip=gethostbyname($host);
-	if(filter_var($ip, FILTER_VALIDATE_IP) !== false){
+	if(filter_var($ip,FILTER_VALIDATE_IP)!==false){
 		echo "IP $ip detected.\n";
 		echo ".. checking against ".count($host_blacklist_ips)." IP blacklists\n";
 		foreach($host_blacklist_ips as $ib){
 			if(cidr_match($ip,$ib)){
 				echo "* IP $ip matched blacklisted $ib\n";
 				// 100115 - shadowban
-				// $opqueue[]=['remove_quiet',$who,['nick'=>$thenick, 'msg'=>$msg, 'timed'=>$timed, 'tqtime'=>$tqtime]];
+				// $opqueue[]=['remove_quiet',$who,['nick'=>$thenick,'msg'=>$msg,'timed'=>$timed,'tqtime'=>$tqtime]];
 				// getops();
 				timedquiet($host_blacklist_time,"*!*@$ip");
 				blacklisted_msg($nick);
@@ -1904,16 +1904,16 @@ function blacklisted_msg($nick){
 }
 
 // http://stackoverflow.com/a/594134
-function cidr_match($ip, $range){
-	list ($subnet, $bits) = explode('/', $range);
+function cidr_match($ip,$range){
+	list($subnet,$bits)=explode('/',$range);
 	if(empty($bits)) $bits=32;
-	$ip = ip2long($ip);
-	$subnet = ip2long($subnet);
-	// $mask = -1 << (32 - $bits);
+	$ip=ip2long($ip);
+	$subnet=ip2long($subnet);
+	// $mask=-1<<(32-$bits);
 	// supposedly needed for 64 bit machines per http://tinyurl.com/oxz4lrw
-	$mask = (-1 << (32 - $bits)) & ip2long('255.255.255.255');
+	$mask=(-1<<(32-$bits)) & ip2long('255.255.255.255');
 	$subnet &= $mask; // nb: in case the supplied subnet wasn't correctly aligned
-	return ($ip & $mask) == $subnet;
+	return ($ip & $mask)==$subnet;
 }
 
 function timedquiet($secs=0,$mask){
@@ -1968,7 +1968,7 @@ function get_wiki_extract($q,$len=280){
 		$unset=false;
 		foreach($arr as $k=>$v){ // reformat section headers
 			if(substr($v,0,3)=='== '){
-				if($foundfrag&&$v=="== $fragstr ==") $unset=$k; // remove current header
+				if($foundfrag && $v=="== $fragstr ==") $unset=$k; // remove current header
 				else $arr[$k]=trim(str_replace('==','',$v)).': ';
 			}
 		}
@@ -1988,9 +1988,9 @@ function get_wiki_extract($q,$len=280){
 function format_extract($e,$len=280,$opts=[]){
 	$e=str_replace(["\n","\t"],' ',$e);
 	$e=html_entity_decode($e,ENT_QUOTES);
-	$e=preg_replace_callback("/(&#[0-9]+;)/", function($m){ return mb_convert_encoding($m[1],'UTF-8','HTML-ENTITIES'); },$e);
+	$e=preg_replace_callback("/(&#[0-9]+;)/",function($m){ return mb_convert_encoding($m[1],'UTF-8','HTML-ENTITIES'); },$e);
 	$e=strip_tags($e);
-	$e=preg_replace('/\s+/m', ' ', $e);
+	$e=preg_replace('/\s+/m',' ',$e);
 	$e=str_shorten($e,$len);
 	if(!isset($opts['keep_quotes'])) $e=trim(trim($e,'"')); // remove outside quotes because we wrap in quotes
 	return $e;
@@ -2023,10 +2023,10 @@ function twitter_api($u,$op){ // https://stackoverflow.com/a/12939923
 	return $r;
 }
 
-function get_true_random($min = 1, $max = 100, $num = 1) {
-	$max = ((int) $max >= 1) ? (int) $max : 100;
-	$min = ((int) $min < $max) ? (int) $min : 1;
-	$num = ((int) $num >= 1) ? (int) $num : 1;
+function get_true_random($min=1,$max=100,$num=1){
+	$max=((int)$max>=1)?(int)$max:100;
+	$min=((int)$min<$max)?(int)$min:1;
+	$num=((int)$num>=1)?(int)$num:1;
 	$r=curlget([CURLOPT_URL=>"http://www.random.org/integers/?num=$num&min=$min&max=$max&col=1&base=10&format=plain&rnd=new"]);
 	$r=trim(str_replace("\n",' ',$r));
 	return $r;
@@ -2036,144 +2036,7 @@ function get_true_random($min = 1, $max = 100, $num = 1) {
 function get_lang($c){
 	global $language_codes;
 	list($c)=explode('-',$c);
-	if(!isset($language_codes)) $language_codes = array(
-		'en' => 'English' ,
-		'aa' => 'Afar' ,
-		'ab' => 'Abkhazian' ,
-		'af' => 'Afrikaans' ,
-		'am' => 'Amharic' ,
-		'ar' => 'Arabic' ,
-		'as' => 'Assamese' ,
-		'ay' => 'Aymara' ,
-		'az' => 'Azerbaijani' ,
-		'ba' => 'Bashkir' ,
-		'be' => 'Byelorussian' ,
-		'bg' => 'Bulgarian' ,
-		'bh' => 'Bihari' ,
-		'bi' => 'Bislama' ,
-		'bn' => 'Bengali/Bangla' ,
-		'bo' => 'Tibetan' ,
-		'br' => 'Breton' ,
-		'ca' => 'Catalan' ,
-		'co' => 'Corsican' ,
-		'cs' => 'Czech' ,
-		'cy' => 'Welsh' ,
-		'da' => 'Danish' ,
-		'de' => 'German' ,
-		'dz' => 'Bhutani' ,
-		'el' => 'Greek' ,
-		'eo' => 'Esperanto' ,
-		'es' => 'Spanish' ,
-		'et' => 'Estonian' ,
-		'eu' => 'Basque' ,
-		'fa' => 'Persian' ,
-		'fi' => 'Finnish' ,
-		'fj' => 'Fiji' ,
-		'fo' => 'Faeroese' ,
-		'fr' => 'French' ,
-		'fy' => 'Frisian' ,
-		'ga' => 'Irish' ,
-		'gd' => 'Scots/Gaelic' ,
-		'gl' => 'Galician' ,
-		'gn' => 'Guarani' ,
-		'gu' => 'Gujarati' ,
-		'ha' => 'Hausa' ,
-		'hi' => 'Hindi' ,
-		'hr' => 'Croatian' ,
-		'hu' => 'Hungarian' ,
-		'hy' => 'Armenian' ,
-		'ia' => 'Interlingua' ,
-		'id' => 'Indonesian' ,
-		'ie' => 'Interlingue' ,
-		'ik' => 'Inupiak' ,
-		'in' => 'Indonesian' ,
-		'is' => 'Icelandic' ,
-		'it' => 'Italian' ,
-		'iw' => 'Hebrew' ,
-		'ja' => 'Japanese' ,
-		'ji' => 'Yiddish' ,
-		'jw' => 'Javanese' ,
-		'ka' => 'Georgian' ,
-		'kk' => 'Kazakh' ,
-		'kl' => 'Greenlandic' ,
-		'km' => 'Cambodian' ,
-		'kn' => 'Kannada' ,
-		'ko' => 'Korean' ,
-		'ks' => 'Kashmiri' ,
-		'ku' => 'Kurdish' ,
-		'ky' => 'Kirghiz' ,
-		'la' => 'Latin' ,
-		'ln' => 'Lingala' ,
-		'lo' => 'Laothian' ,
-		'lt' => 'Lithuanian' ,
-		'lv' => 'Latvian/Lettish' ,
-		'mg' => 'Malagasy' ,
-		'mi' => 'Maori' ,
-		'mk' => 'Macedonian' ,
-		'ml' => 'Malayalam' ,
-		'mn' => 'Mongolian' ,
-		'mo' => 'Moldavian' ,
-		'mr' => 'Marathi' ,
-		'ms' => 'Malay' ,
-		'mt' => 'Maltese' ,
-		'my' => 'Burmese' ,
-		'na' => 'Nauru' ,
-		'ne' => 'Nepali' ,
-		'nl' => 'Dutch' ,
-		'no' => 'Norwegian' ,
-		'oc' => 'Occitan' ,
-		'om' => '(Afan)/Oromoor/Oriya' ,
-		'pa' => 'Punjabi' ,
-		'pl' => 'Polish' ,
-		'ps' => 'Pashto/Pushto' ,
-		'pt' => 'Portuguese' ,
-		'qu' => 'Quechua' ,
-		'rm' => 'Rhaeto-Romance' ,
-		'rn' => 'Kirundi' ,
-		'ro' => 'Romanian' ,
-		'ru' => 'Russian' ,
-		'rw' => 'Kinyarwanda' ,
-		'sa' => 'Sanskrit' ,
-		'sd' => 'Sindhi' ,
-		'sg' => 'Sangro' ,
-		'sh' => 'Serbo-Croatian' ,
-		'si' => 'Singhalese' ,
-		'sk' => 'Slovak' ,
-		'sl' => 'Slovenian' ,
-		'sm' => 'Samoan' ,
-		'sn' => 'Shona' ,
-		'so' => 'Somali' ,
-		'sq' => 'Albanian' ,
-		'sr' => 'Serbian' ,
-		'ss' => 'Siswati' ,
-		'st' => 'Sesotho' ,
-		'su' => 'Sundanese' ,
-		'sv' => 'Swedish' ,
-		'sw' => 'Swahili' ,
-		'ta' => 'Tamil' ,
-		'te' => 'Tegulu' ,
-		'tg' => 'Tajik' ,
-		'th' => 'Thai' ,
-		'ti' => 'Tigrinya' ,
-		'tk' => 'Turkmen' ,
-		'tl' => 'Tagalog' ,
-		'tn' => 'Setswana' ,
-		'to' => 'Tonga' ,
-		'tr' => 'Turkish' ,
-		'ts' => 'Tsonga' ,
-		'tt' => 'Tatar' ,
-		'tw' => 'Twi' ,
-		'uk' => 'Ukrainian' ,
-		'ur' => 'Urdu' ,
-		'uz' => 'Uzbek' ,
-		'vi' => 'Vietnamese' ,
-		'vo' => 'Volapuk' ,
-		'wo' => 'Wolof' ,
-		'xh' => 'Xhosa' ,
-		'yo' => 'Yoruba' ,
-		'zh' => 'Chinese' ,
-		'zu' => 'Zulu' ,
-	);
+	if(!isset($language_codes)) $language_codes=['en'=>'English','aa'=>'Afar','ab'=>'Abkhazian','af'=>'Afrikaans','am'=>'Amharic','ar'=>'Arabic','as'=>'Assamese','ay'=>'Aymara','az'=>'Azerbaijani','ba'=>'Bashkir','be'=>'Byelorussian','bg'=>'Bulgarian','bh'=>'Bihari','bi'=>'Bislama','bn'=>'Bengali/Bangla','bo'=>'Tibetan','br'=>'Breton','ca'=>'Catalan','co'=>'Corsican','cs'=>'Czech','cy'=>'Welsh','da'=>'Danish','de'=>'German','dz'=>'Bhutani','el'=>'Greek','eo'=>'Esperanto','es'=>'Spanish','et'=>'Estonian','eu'=>'Basque','fa'=>'Persian','fi'=>'Finnish','fj'=>'Fiji','fo'=>'Faeroese','fr'=>'French','fy'=>'Frisian','ga'=>'Irish','gd'=>'Scots/Gaelic','gl'=>'Galician','gn'=>'Guarani','gu'=>'Gujarati','ha'=>'Hausa','hi'=>'Hindi','hr'=>'Croatian','hu'=>'Hungarian','hy'=>'Armenian','ia'=>'Interlingua','id'=>'Indonesian','ie'=>'Interlingue','ik'=>'Inupiak','in'=>'Indonesian','is'=>'Icelandic','it'=>'Italian','iw'=>'Hebrew','ja'=>'Japanese','ji'=>'Yiddish','jw'=>'Javanese','ka'=>'Georgian','kk'=>'Kazakh','kl'=>'Greenlandic','km'=>'Cambodian','kn'=>'Kannada','ko'=>'Korean','ks'=>'Kashmiri','ku'=>'Kurdish','ky'=>'Kirghiz','la'=>'Latin','ln'=>'Lingala','lo'=>'Laothian','lt'=>'Lithuanian','lv'=>'Latvian/Lettish','mg'=>'Malagasy','mi'=>'Maori','mk'=>'Macedonian','ml'=>'Malayalam','mn'=>'Mongolian','mo'=>'Moldavian','mr'=>'Marathi','ms'=>'Malay','mt'=>'Maltese','my'=>'Burmese','na'=>'Nauru','ne'=>'Nepali','nl'=>'Dutch','no'=>'Norwegian','oc'=>'Occitan','om'=>'(Afan)/Oromoor/Oriya','pa'=>'Punjabi','pl'=>'Polish','ps'=>'Pashto/Pushto','pt'=>'Portuguese','qu'=>'Quechua','rm'=>'Rhaeto-Romance','rn'=>'Kirundi','ro'=>'Romanian','ru'=>'Russian','rw'=>'Kinyarwanda','sa'=>'Sanskrit','sd'=>'Sindhi','sg'=>'Sangro','sh'=>'Serbo-Croatian','si'=>'Singhalese','sk'=>'Slovak','sl'=>'Slovenian','sm'=>'Samoan','sn'=>'Shona','so'=>'Somali','sq'=>'Albanian','sr'=>'Serbian','ss'=>'Siswati','st'=>'Sesotho','su'=>'Sundanese','sv'=>'Swedish','sw'=>'Swahili','ta'=>'Tamil','te'=>'Tegulu','tg'=>'Tajik','th'=>'Thai','ti'=>'Tigrinya','tk'=>'Turkmen','tl'=>'Tagalog','tn'=>'Setswana','to'=>'Tonga','tr'=>'Turkish','ts'=>'Tsonga','tt'=>'Tatar','tw'=>'Twi','uk'=>'Ukrainian','ur'=>'Urdu','uz'=>'Uzbek','vi'=>'Vietnamese','vo'=>'Volapuk','wo'=>'Wolof','xh'=>'Xhosa','yo'=>'Yoruba','zh'=>'Chinese','zu'=>'Zulu'];
 	if(array_key_exists($c,$language_codes)) return $language_codes[$c]; else return 'Unknown';
 }
 
