@@ -1201,8 +1201,7 @@ while(1){
 									$t=str_replace(["\r\n","\n","\t"],' ',$t);
 									$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
 									$t=trim(preg_replace('/\s+/',' ',$t));
-									$t=str_shorten($t,438);
-									$t="[ {$r->user->name}: $t ]";
+									$t='[ '.str_shorten("{$r->user->name}: $t").' ]';
 									if($title_bold) $t="\x02$t\x02";
 									send("PRIVMSG $channel :$t\n");
 								} else {
@@ -2052,7 +2051,7 @@ function str_replace_one($needle,$replace,$haystack){
 }
 
 // shorten string to last whole word within x characters and max bytes
-function str_shorten($s,$len,$opts=[]){
+function str_shorten($s,$len=999,$opts=[]){
 	global $baselen;
 	if(!isset($opts['less'])) $opts['less']=0;
 	if(!isset($opts['nodots'])) $opts['nodots']=false;
@@ -2062,7 +2061,7 @@ function str_shorten($s,$len,$opts=[]){
 		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
 		$e=true;
 	}
-	$m=502-$baselen-$opts['less']; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings
+	$m=502-$baselen-$opts['less']; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings using 'less' for extra data, remove auto bracket calc and use 'less' on all calls
 	if($opts['nodots']) $m+=4;
 	if(strlen($s)>$m){
 		$s=mb_strcut($s,0,$m); // mb-safe cut to bytes
