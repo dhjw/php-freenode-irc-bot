@@ -34,6 +34,6 @@ function plugin_invidious(){
 	$ytextra.=" | {$tmp->items[0]->snippet->channelTitle}";
 	$ytextra.=" | ".number_format($tmp2->items[0]->statistics->viewCount)." views";
 	$title=html_entity_decode($tmp->items[0]->snippet->title,ENT_QUOTES);
-	send("PRIVMSG $privto :https://invidio.us/watch?v=$v | $title$ytextra\n");
+	send("PRIVMSG $privto :https://invidio.us/$v | $title$ytextra\n");
 	return;
 }
