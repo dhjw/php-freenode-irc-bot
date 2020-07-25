@@ -943,10 +943,12 @@ while(1){
 
 					// imgur via api
 					// single image post ids are usually accessible as an image rather than an album so first check if an image then an album
-					if(!empty($imgur_client_id) && preg_match('#^https?://(i\.)?imgur\.com/(?:(?:gallery|a)/)?(\w+)#',$u,$m)){
+					if(!empty($imgur_client_id) && preg_match('#^https?://(i\.)?imgur\.com/(?:(?:gallery|a|r)/)?(\w+)(?:/(\w+))?#',$u,$m)){
 						echo "getting from imgur api..\n";
-						$r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/image/{$m[2]}",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
-						if(empty($r)) $r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/album/{$m[2]}",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
+						if(!empty($m[3])) $id=$m[3]; else $id=$m[2];
+						$r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/image/$id",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
+						if(empty($r)) $r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/album/$id",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
+						if(!empty($r) && !empty($r->data->section) && empty($r->data->title) && empty($r->data->description)) $r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/gallery/r/{$r->data->section}/$id",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]])); // subreddit image. title and desc may always be empty but included to be safe
 						if(!empty($r) && $r->success==1){
 							// for i.* direct links default to image description, else default to post title
 							if(!empty($m[1])) if(!empty($r->data->description)) $d=$r->data->description; else $d=$r->data->title; else if(!empty($r->data->title)) $d=$r->data->title; else $d=$r->data->description;
