@@ -49,6 +49,7 @@ function bible(){
 			}
 			return(send("PRIVMSG $target :Error: {$r->error}\n"));
 		}
+		$r->data->content=preg_replace('/<p class="d">(.*?)<\/p>/','',$r->data->content);
 		$r->data->content=preg_replace('/<p.*?>(.*?)<\/p>/',"$1",$r->data->content);
 		$r->data->content=preg_replace('/<span .*?class="v">.+?<\/span>/','',$r->data->content);
 		$r->data->content=preg_replace('/<span class="add">(.+?)<\/span>/',"\x1F$1\x1F",$r->data->content);
