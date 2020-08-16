@@ -1417,6 +1417,31 @@ while(1){
 						}
 					}
 
+					// brighteon videos
+					if(preg_match('#https?://(?:www\.)?brighteon\.com#',$u)){
+						$html=curlget([CURLOPT_URL=>$u]);
+						$dom=new DOMDocument();
+						if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html)){
+							$x=new DOMXPath($dom);
+							list($n)=$x->query('//script[@id="__NEXT_DATA__"]');
+							if(!empty($n) && !empty($n->textContent)){
+								$j=json_decode(trim($n->textContent));
+								if(!empty($j) && !empty($j->props) && !empty($j->props->initialState) && !empty($j->props->initialState->videos) && !empty($j->props->initialState->videos->videoDetails) && !empty($j->props->initialState->videos->videoDetails->data)){
+									$t=strip_tags(html_entity_decode($j->props->initialState->videos->videoDetails->data->video->name,ENT_QUOTES | ENT_HTML5,'UTF-8'));
+									$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$t);
+									$t=trim(preg_replace('/\s+/',' ',$t));
+									$d=$j->props->initialState->videos->videoDetails->data->video->duration;
+									if(substr_count($d,':')>1) $d=ltrim($d,'0');
+									$t=str_shorten($t,424,['less'=>3+strlen($d)]);
+									$t="[ ".trim($t)." - $d ]";
+									if($title_bold) $t="\x02$t\x02";
+									send("PRIVMSG $channel :$t\n");
+									continue(2);
+								}
+							}
+						}
+					}
+
 					// skips
 					$pathinfo=pathinfo($u);
 					if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
