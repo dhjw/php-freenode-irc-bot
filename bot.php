@@ -932,7 +932,7 @@ while(1){
 			if(!empty($m[0])) $urls=array_unique($m[0]); else $urls=[];
 			foreach($urls as $u){
 				$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
-				foreach($ignore_urls as $v) if(preg_match('#^.*?://'.preg_quote($v).'#',$u)){
+				foreach($ignore_urls as $v) if(preg_match('#^\w*://(?:[a-zA-Z0-9-]+\.){0,}'.preg_quote($v).'#',$u)){
 					echo "Ignored URL $v\n";
 					continue(2);
 				}
