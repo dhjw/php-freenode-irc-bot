@@ -937,6 +937,7 @@ while(1){
 					continue(2);
 				}
 				$u_tries=0;
+				$invidious_mirror=false;
 				while(1){ // extra loop for retries
 					echo "Checking URL: $u\n";
 					$html='';
@@ -970,7 +971,8 @@ while(1){
 						}
 					}
 
-					// youtube via api
+					// youtube via api, w/invidious mirror support
+					invidious:
 					if(!empty($youtube_api_key)){
 						$yt='';
 						if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/(?:watch\?.*v=|embed/)([a-zA-Z0-9-_]+)#',$u,$m) || preg_match('#^https?://(?:youtu\.be|invidio\.us)/([a-zA-Z0-9-_]+)/?(?:$|\?)#',$u,$m)) $yt='v';
@@ -1029,6 +1031,7 @@ while(1){
 							}
 						}
 					}
+					if($invidious_mirror) goto invidious_continue; // mirror didnt hit api
 
 					// wikipedia
 					// todo: extracts on subdomains other than en.wikipedia.org, auto-translate?
@@ -1481,6 +1484,13 @@ while(1){
 						}
 					}
 					$orig_title=$title;
+					// if potential invidious mirror rewrite URL and jump back to yt/invidious. if not an api URL will continue past here and parse already-fetched html. yewtu.be has a captcha so handle manually
+					if(!empty($youtube_api_key) && (preg_match('/ - Invidious$/',$title) || preg_match('#^https://yewtu.be/#',$u)) && empty($invidious_mirror) && !preg_match('#^https://invidio\.us#',$u)){
+						$u=preg_replace('#^https?://.*?/(.*)#','https://invidio.us/$1',$u);
+						$invidious_mirror=true;
+						goto invidious;
+					}
+					invidious_continue:
 					// echo "orig title= ".print_r($title,true)."\n";
 					$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 					// strip numeric entities that don't seem to display right on IRC when converted
