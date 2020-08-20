@@ -1002,18 +1002,12 @@ while(1){
 							if(empty($r)){
 								send("PRIVMSG $channel :[ Temporary YouTube API error ]\n");
 								continue(2);
-							} elseif($yt=='v' && $r->pageInfo->totalResults==0){
-								if(preg_match('#^https?://invidio\.us#',$u)) $s=true; // skip if invidious short url vid not found so other site pages work
+							} elseif(empty($r->items)){
+								if($yt=='v' && preg_match('#^https?://invidio\.us#',$u)) $s=true; // skip if invidious short url vid not found so other site pages work
 								else {
-									send("PRIVMSG $channel :Video does not exist.\n");
+									send("PRIVMSG $channel :".($yt=='v'?'Video':($yt=='c'?'Channel':($yt=='u'?'User':($yt=='p'?'Playlist':''))))." does not exist.\n");
 									continue(2);
 								}
-							} elseif(($yt=='c' || $yt=='u') && $r->pageInfo->totalResults==0){
-								send("PRIVMSG $channel :".($yt=='c'?'Channel':'User')." does not exist.\n");
-								continue(2);
-							} elseif($yt=='p' && $r->pageInfo->totalResults==0){
-								send("PRIVMSG $channel :Playlist does not exist.\n");
-								continue(2);
 							}
 							if(!$s){
 								$x='';
