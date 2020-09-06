@@ -1198,7 +1198,7 @@ while(1){
 									}
 									if($mtyp=='photo') $mtyp='image';
 									elseif($mtyp=='animated_gif') $mtyp='gif';
-									if($mcnt==1) $t.="($mtyp)"; elseif($mcnt>1) $t.="($mcnt {$mtyp}s)";
+									if($mcnt>0) $t.=' '.($mcnt==1?"($mtyp)":"($mcnt {$mtyp}s)");
 									// add a hint for external links
 									foreach($r->entities->urls as $v){
 										$h=get_url_hint($v->expanded_url);
