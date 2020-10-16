@@ -861,7 +861,7 @@ while(1){
 				if(!empty($xml) && !empty($xml->pod[1]->subpod->plaintext)){
 					print_r([$xml->pod[0],$xml->pod[1]]);
 					if($xml->pod[1]->subpod->plaintext=='(data not available)') send("PRIVMSG $privto :Data not available.\n");
-					else send("PRIVMSG $privto :".trim(str_replace("\n",' • ',$xml->pod[1]->subpod->plaintext))."\n");
+					else send("PRIVMSG $privto :".str_shorten(trim(str_replace("\n",' • ',$xml->pod[1]->subpod->plaintext)),999,['nowordcut'=>1])."\n");
 				} else send("PRIVMSG $privto :Data not available.\n");
 				continue;
 			} elseif($trigger=='!ud'){
@@ -2093,17 +2093,18 @@ function str_shorten($s,$len=999,$opts=[]){
 	global $baselen;
 	if(!isset($opts['less'])) $opts['less']=0;
 	if(!isset($opts['nodots'])) $opts['nodots']=false;
+	if(!isset($opts['nowordcut'])) $opts['nowordcut']=false;
 	$e=false;
 	if(mb_strlen($s)>$len){ // desired max chars
 		$s=mb_substr($s,0,$len);
-		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
+		if(!$opts['nowordcut']) $s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
 		$e=true;
 	}
 	$m=502-$baselen-$opts['less']; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings using 'less' for extra data, remove auto bracket calc and use 'less' on all calls
 	if($opts['nodots']) $m+=4;
 	if(strlen($s)>$m){
 		$s=mb_strcut($s,0,$m); // mb-safe cut to bytes
-		$s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
+		if(!$opts['nowordcut']) $s=mb_substr($s,0,mb_strrpos($s,' ')+1); // cut to last word
 		$e=true;
 	}
 	if($e) $s=rtrim($s,' ;.,').(!$opts['nodots']?' ...':'');  // trim punc & add ellipses
