@@ -850,6 +850,7 @@ while(1){
 				} else send("PRIVMSG $privto :Finance API error.\n");
 				continue;
 			} elseif($trigger=='!wa'){
+				// wolfram alpha
 				$u="http://api.wolframalpha.com/v2/query?input=".urlencode($args)."&output=plaintext&appid={$wolfram_appid}";
 				try {
 					$xml=new SimpleXMLElement(file_get_contents($u));
@@ -861,7 +862,23 @@ while(1){
 				if(!empty($xml) && !empty($xml->pod[1]->subpod->plaintext)){
 					print_r([$xml->pod[0],$xml->pod[1]]);
 					if($xml->pod[1]->subpod->plaintext=='(data not available)') send("PRIVMSG $privto :Data not available.\n");
-					else send("PRIVMSG $privto :".str_shorten(trim(str_replace("\n",' • ',$xml->pod[1]->subpod->plaintext)),999,['nowordcut'=>1])."\n");
+					else {
+						$o=str_shorten(trim(str_replace("\n",' • ',$xml->pod[1]->subpod->plaintext)),999,['nowordcut'=>1]);
+						echo "o=\"$o\"\n";
+						// turn fraction into decimal
+						if(preg_match('#^(\d+)/(\d+)(?: \(irreducible\))?#',$o,$m)){
+							if(extension_loaded('bcmath')){
+								bcscale(64);
+								$o=rtrim(bcdiv($m[1],$m[2]),'0');
+								if(strpos($o,'.')!==false){
+									list($a,$b)=explode('.',$o);
+									if(strlen($b)>63) $b=substr($b,0,63).'...';
+									$o="$a.$b";
+								}
+							} else echo "Can't reduce Wolfram fraction result to decimal because bcmath extension not loaded.\n";
+						}
+						send("PRIVMSG $privto :$o\n");
+					}
 				} else send("PRIVMSG $privto :Data not available.\n");
 				continue;
 			} elseif($trigger=='!ud'){
