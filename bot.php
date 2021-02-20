@@ -1462,7 +1462,7 @@ while(1){
 
 					if(!isset($header)) $header=[];
 
-					if(!empty($tor_enabled) && (preg_match('#^http://(?:.*?)\.onion(?:$|/)#',$u) || !empty($tor_all))){
+					if(!empty($tor_enabled) && (preg_match('#^https?://(?:.*?)\.onion(?:$|/)#',$u) || !empty($tor_all))){
 						echo "getting url title via tor\n";
 						$html=curlget([CURLOPT_URL=>$u,CURLOPT_PROXYTYPE=>7,CURLOPT_PROXY=>"http://$tor_host:$tor_port",CURLOPT_CONNECTTIMEOUT=>60,CURLOPT_TIMEOUT=>60,CURLOPT_HTTPHEADER=>$header]);
 						if(empty($html)){
