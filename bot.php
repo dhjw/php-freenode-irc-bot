@@ -1272,33 +1272,39 @@ while(1){
 
 					// instagram
 					if(preg_match('#https?://(?:www\.)?instagram\.com/p/([A-Za-z0-9-_]*)#',$u,$m)){
+						echo "getting instagram post info\n";
 						if(!empty($m[1])){
 							$t='';
-							$r=@json_decode(file_get_contents("https://api.instagram.com/oembed/?url=https://www.instagram.com/p/$m[1]/"));
-							if(!empty($r) && !empty($r->html)){
-								// get author
-								$pos=strpos($r->html,'A post shared by');
-								if($pos!==false){
-									$tmp=substr($r->html,$pos);
-									$tmp=substr($tmp,strpos($tmp,'target="_blank">')+16);
-									preg_match("/(.*?)(?:<\/a>|\(@".preg_quote($r->author_name)."\))/",$tmp,$m);
-									$tmp=trim($m[1]);
-								}
-								// get title
-								if(!empty($r->title)){
-									$tmp2=str_replace(["\r\n","\n","\t"],' ',$r->title);
-									$tmp2=trim(preg_replace('/\s+/',' ',$tmp2));
-									$tmp2=str_shorten($tmp2,280);
-									$t="[ $tmp: $tmp2 ]";
-								} else {
-									// no title, create default so dont have to do another request
-									preg_match('/datetime="(.*?)"/',$r->html,$m);
-									if(!empty($m[1])){
-										$tmp2=gmdate("M j, Y \a\\t g:ia \U\T\C",strtotime($m[1]));
-										$t="[ Post by $tmp • $tmp2 ]";
+							$r=@json_decode(file_get_contents("https://www.instagram.com/p/$m[1]/?__a=1"));
+							if(!empty($r) && !empty($r->graphql->shortcode_media)){
+								$m=$r->graphql->shortcode_media;
+								$i=0; $v=0;
+								if($m->__typename=='GraphImage') $i=1;
+								elseif($m->__typename=='GraphVideo') $v=1;
+								elseif($m->__typename=='GraphSidecar'){
+									foreach($m->edge_sidecar_to_children->edges as $a){
+										if($a->node->__typename=='GraphImage') $i++;
+										elseif($a->node->__typename=='GraphVideo') $v++;
 									}
 								}
-								if(!empty($t)){
+								if($i>0 || $v>0){
+									 if($i>0 && $v>0) $p="$i image".($i>1?'s':'').", $v video".($v>1?'s':'');
+									 else {
+										 if($i>0) $p=$i==1?'image':"$i images";
+										 elseif($v>0) $p=$v==1?'video':"$v videos";
+									 }
+								} else $p='';
+								$c=$m->edge_media_to_caption->edges[0]->node->text;
+								// $n=$m->owner->username;
+								$f=$r->graphql->shortcode_media->owner->full_name;
+								if(!empty($n)){
+									if(!empty($c)){
+										$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',"$f: $c");
+										$t=trim(preg_replace('/\s+/',' ',$t));
+										$t=str_shorten($t,280);
+									} else $t="$n:";
+									if(!empty($p)) $t.=" ($p)";
+									$t="[ $t ]";
 									if($title_bold) $t="\x02$t\x02";
 									send("PRIVMSG $channel :$t\n");
 									continue(2);
@@ -1512,7 +1518,7 @@ while(1){
 					$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 					// strip numeric entities that don't seem to display right on IRC when converted
 					$title=preg_replace('/(&#[0-9]+;)/','',$title);
-					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet'];
+					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet','Login • Instagram'];
 					$title=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$title);
 					$title=trim(preg_replace('/\s+/',' ',$title));
 					foreach($notitletitles as $ntt) if($title==$ntt) continue(3);
