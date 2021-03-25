@@ -127,6 +127,7 @@ while(1){
 		$in_channel=0;
 		// connect loop
 		while(1){
+			echo "Connecting...\n";
 			$botmask='';
 			if($custom_connect_ip) $socket_options=['socket'=>['bindto'=>"$connect_ip:0"]]; else $socket_options=[];
 			$socket_context=stream_context_create($socket_options);
@@ -1586,7 +1587,7 @@ while(1){
 			}
 		}
 
-		if(timedout() || empty($data) || ($ex[1]=='NOTICE' && $ex[2]==':Server Terminating. Received SIGTERM') || (isme() && $ex[1]=='QUIT' && $ex[2]==':Ping timeout')){ $connect=1; break; }
+		if(timedout() || empty($data) || ($ex[1]=='NOTICE' && strpos($data,':Server Terminating. Received SIGTERM')!==false) || (isme() && $ex[1]=='QUIT' && strpos($data,':Ping timeout')!==false)){ echo "Stream error, reconnecting...\n"; $connect=1; break; }
 	}
 	if(timedout()){
 		echo "ERROR, timed out ({$stream_timeout}s), reconnecting..\n";
