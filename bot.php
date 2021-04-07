@@ -1519,10 +1519,10 @@ while(1){
 					$title=html_entity_decode($title,ENT_QUOTES | ENT_HTML5,'UTF-8');
 					// strip numeric entities that don't seem to display right on IRC when converted
 					$title=preg_replace('/(&#[0-9]+;)/','',$title);
-					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet','Login • Instagram'];
 					$title=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$title);
 					$title=trim(preg_replace('/\s+/',' ',$title));
-					foreach($notitletitles as $ntt) if($title==$ntt) continue(3);
+					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet','Login • Instagram','Access denied .* used Cloudflare to restrict access','Amazon.* Something Went Wrong.*','Sorry! Something went wrong!'];
+					foreach($notitletitles as $ntt) if(preg_match('/^'.str_replace('\.\*','.*',preg_quote($ntt)).'$/',$title)) continue(3);
 					foreach($title_replaces as $k=>$v) $title=str_replace($k,$v,$title);
 					// if(!$title) $title='No title found.';
 					if(strpos($u,'//twitter.com/')!==false) $title=str_replace_one(' on Twitter: "',': "',$title);
