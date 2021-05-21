@@ -1,7 +1,7 @@
 <?php
 // settings
 $admins=['dw1']; // array of account names (registered nicks on rizon)
-$network='freenode'; // supported: freenode, gamesurge, rizon, other
+$network='freenode'; // supported: freenode, gamesurge, rizon, libera, other
 // $host='irc.freenode.net:6667';
 $host='ssl://irc.freenode.net:7000'; // ssl
 $channel='##examplechan';

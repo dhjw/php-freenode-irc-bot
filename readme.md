@@ -1,5 +1,5 @@
 ## PHP IRC Bot
-A simple but powerful IRC bot written in PHP. Supports [FreeNode](https://freenode.net), [GameSurge](https://gamesurge.net), [Rizon](https://www.rizon.net) and other networks.
+A simple but powerful IRC bot written in PHP. Supports [FreeNode](https://freenode.net), [GameSurge](https://gamesurge.net), [Rizon](https://www.rizon.net), [Libera](https://libera.chat) and other networks.
 
 ### How to use
 - Install PHP with pcntl, cURL, mbstring, XML and JSON support, e.g. on Ubuntu `sudo apt install php php-curl php-mbstring php-xml php-json`

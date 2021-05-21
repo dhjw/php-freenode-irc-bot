@@ -21,7 +21,7 @@ if(!empty($argv[2])){
 $instance_hash=md5(file_get_contents(dirname(__FILE__).'/bot.php'));
 $botdata=json_decode(file_get_contents($datafile));
 if(isset($botdata->nick)) $nick=$botdata->nick;
-if(empty($network) || !in_array($network,['freenode','rizon','gamesurge','other'])){
+if(empty($network) || !in_array($network,['freenode','rizon','gamesurge','libera','other'])){
 	echo "Missing or invalid \$network setting. Using default Freenode.\n";
 	$network='freenode';
 }
@@ -51,10 +51,10 @@ $helptxt.=" !insult [target] - deliver a Shakespearian insult to the channel wit
 if($network=='freenode') $helptxt.=" !r or !remove <nick> [message] - remove a single user with an optional message (quiet, no 'kick' notice to client)\n";
 $helptxt.=" !b or !ban <nick or hostmask> [message] - ban by nick (*!*@mask) or hostmask. if by nick, also remove user with optional message
  !ub or !unban <hostmasks> - unban by hostmask\n";
-if($network=='freenode') $helptxt.= " !q or !quiet [mins] <nick or hostmask> - quiet by nick (*!*@mask) or hostmask for optional [mins] or default no expiry
- !rq or !removequiet [mins] <nick> [message] - remove user then quiet for optional [mins] with optional [message]
- !uq or !unquiet <hostmasks> - unquiet by hostmask
- !fyc [mins] <nick or hostmask> - ban by hostmask with redirect to ##fix_your_connection for [mins] or default 60 mins\n";
+if($network=='freenode' || $network=='libera') $helptxt.= " !q or !quiet [mins] <nick or hostmask> - quiet by nick (*!*@mask) or hostmask for optional [mins] or default no expiry\n";
+if($network=='freenode') $helptxt.= " !rq or !removequiet [mins] <nick> [message] - remove user then quiet for optional [mins] with optional [message]\n";
+if($network=='freenode' || $network=='libera') $helptxt.= " !uq or !unquiet <hostmasks> - unquiet by hostmask\n";
+if($network=='freenode') $helptxt.= " !fyc [mins] <nick or hostmask> - ban by hostmask with redirect to ##fix_your_connection for [mins] or default 60 mins\n";
 $helptxt.=" !nick <nick> - Change the bot's nick
  !invite <nick> - invite to channel
  !restart [message] - reload bot with optional quit message
@@ -153,7 +153,7 @@ while(1){
 			send("NICK $nick\n");
 			send("USER $ident $user $user :{$ircname}\n"); // first $user can be changed to modify ident and account login still works
 			if(!empty($pass)) send("PASS $pass\n");
-			if($network=='freenode'){
+			if($network=='freenode' || $network=='libera'){
 				send("CAP REQ account-notify\n");
 				send("CAP REQ extended-join\n");
 				send("CAP END\n");
@@ -261,18 +261,19 @@ while(1){
 				foreach($botdata->tq as $k=>$f){
 					list($ftime,$fdur,$fhost)=explode('|',$f);
 					if(time()-$ftime >= $fdur){
+						if(strpos($fhost,'!')===false && strpos($fhost,'$a:')===false) $fhost.='!*@*';
 						$tounban[]=$fhost;
 						unset($botdata->tq[$k]);
 					}
 				}
 				if(!empty($tounban)){
 					$botdata->tq=array_values($botdata->tq);
-					// $opqueue[]=['-q',$tounban];
 					file_put_contents($datafile,json_encode($botdata));
-					// getops();
-					foreach($tounban as $who){
-						if(strpos($who,"!")===false) $who.='!*@*';
-						send("PRIVMSG chanserv :UNQUIET $channel $who\n");
+					if($network=='freenode'){
+						foreach($tounban as $who) send("PRIVMSG chanserv :UNQUIET $channel $who\n");
+					} elseif($network=='libera' || $network=='other'){
+						$opqueue[]=['-q',$tounban];
+						getops();
 					}
 				}
 			}
@@ -313,7 +314,7 @@ while(1){
 				$botdata=json_decode(file_get_contents($datafile));
 				$botdata->nick=$nick;
 				file_put_contents($datafile,json_encode($botdata));
-				if($network=='freenode' && (empty($disable_nickserv) || empty($disable_sasl))) send("PRIVMSG NickServ GROUP\n");
+				if(($network=='freenode' || $network=='libera') && (empty($disable_nickserv) || empty($disable_sasl))) send("PRIVMSG NickServ GROUP\n");
 				elseif($network=='rizon' && (empty($disable_nickserv) || empty($disable_sasl))) send("PRIVMSG NickServ GROUP $user $pass\n");
 				$base_msg_len=strlen(":$nick!~$ident@$botmask PRIVMSG  :\r\n");
 				continue;
@@ -335,7 +336,7 @@ while(1){
 		}
 
 		// got ops, run op queue
-		if(trim($data)==":ChanServ!ChanServ@services. MODE $channel +o $nick"){
+		if(preg_match('/^:ChanServ!ChanServ@services[^\ ]* MODE '.preg_quote("$channel +o $nick").'$/', rtrim($data))){
 			echo "Got ops, running op queue\n";
 			print_r($opqueue);
 			$opped=true;
@@ -347,7 +348,7 @@ while(1){
 		// end of NAMES list, joined main channel so do a WHO now
 		if($ex[1]=='366'){
 			$in_channel=1;
-			if(in_array($network,['freenode','gamesurge'])) send("WHO $channel %hna\n"); else send("WHO $channel\n");
+			if(in_array($network,['freenode','gamesurge','libera'])) send("WHO $channel %hna\n"); else send("WHO $channel\n");
 			continue;
 		}
 
@@ -364,7 +365,7 @@ while(1){
 			// check_dnsbl($ex[7],$ex[5],true);
 			continue;
 		}
-		if($ex[1]=='354'){ // freenode, gamesurge
+		if($ex[1]=='354'){ // freenode, gamesurge, libera
 			$id=search_multi($users,'nick',$ex[4]);
 			if(empty($id)) $users[]=['nick'=>$ex[4],'host'=>$ex[3],'account'=>rtrim($ex[5])];
 			else {
@@ -392,7 +393,7 @@ while(1){
 			// just add user to array because they shouldnt be there already
 			// parse ex0 for username and hostmask
 			list($tmpnick,$tmphost)=parsemask($ex[0]);
-			if($network=='freenode'){ // extended-join with account
+			if($network=='freenode' || $network=='libera'){ // extended-join with account
 				if($ex[3]=='*') $ex[3]='0';
 				$users[]=['nick'=>$tmpnick,'host'=>$tmphost,'account'=>$ex[3]];
 			} else {
@@ -449,7 +450,7 @@ while(1){
 						send("PRIVMSG $tmp :Nick not found in channel.\n");
 						continue;
 					}
-					if($network=='freenode' && $users[$id]['account']<>'0') $mask='$a:'.$users[$id]['account'];
+					if(($network=='freenode' || $network=='libera') && $users[$id]['account']<>'0') $mask='$a:'.$users[$id]['account'];
 					else $mask="*!*@".$users[$id]['host'];
 				} else $tmpnick='';
 				$mask=str_replace('@gateway/web/freenode/ip.','@',$mask);
@@ -459,7 +460,7 @@ while(1){
 			} elseif($trigger=='!unban' || $trigger=='!ub'){
 				$opqueue[]=['-b',explode(' ',$args)];
 				getops();
-			} elseif(($trigger=='!quiet' || $trigger=='!q') && $network=='freenode'){
+			} elseif(($trigger=='!quiet' || $trigger=='!q') && ($network=='freenode' || $network=='libera' || $network=='other')){
 				$arr=explode(' ',$args);
 				if(is_numeric($arr[0])){
 					$timed=1;
@@ -478,14 +479,20 @@ while(1){
 							continue;
 						}
 						// if has account use it else create mask
-						if($network=='freenode' && $users[$id]['account']<>'0') $who='$a:'.$users[$id]['account'];
+						if(($network=='freenode' || $network=='libera') && $users[$id]['account']<>'0') $who='$a:'.$users[$id]['account'];
 						else $who="*!*@".$users[$id]['host'];
 					}
 					echo "Quiet $who, timed=$timed tqtime=$tqtime\n";
-					$who=str_replace('@gateway/web/freenode/ip.','@',$who);
+					if($network=='freenode') $who=str_replace('@gateway/web/freenode/ip.','@',$who);
 					if($timed) timedquiet($tqtime,$who);
-					else send("PRIVMSG chanserv :QUIET $channel $who\n");
-					// todo: +q instead of chanserv quiet for 'other' network, and enable !q
+					else {
+						if($network == 'freenode'){
+							send("PRIVMSG chanserv :QUIET $channel $who\n");
+						} elseif ($network=='libera' || $network=='other'){
+							$opqueue[]=['+q',$who];
+							getops();
+						}
+					}
 				}
 				continue;
 			} elseif(($trigger=='!removequiet' || $trigger=='!rq') && $network=='freenode'){ // shadowquiet when channel +z
@@ -514,16 +521,19 @@ while(1){
 					else $who="*!*@".$users[$id]['host'];
 				}
 				echo "Quiet $who, timed=$timed tqtime=$tqtime\n";
-				$who=str_replace('@gateway/web/freenode/ip.','@',$who);
+				if($network=='freenode') $who=str_replace('@gateway/web/freenode/ip.','@',$who);
 				$opqueue[]=['remove_quiet',$who,['nick'=>$thenick,'msg'=>$m,'timed'=>$timed,'tqtime'=>$tqtime]];
 				getops();
 				continue;
-			} elseif(($trigger=='!unquiet' || $trigger=='!uq') && $network=='freenode'){
-				// $opqueue[]=['-q',explode(' ',$args)];
-				// getops();
-				send("PRIVMSG chanserv :UNQUIET $channel $args\n");
-				continue;
-				// todo: -q instead of chanserv unquiet for 'other' network, and enable !uq
+			} elseif(($trigger=='!unquiet' || $trigger=='!uq')){
+				if($network=='freenode'){
+					send("PRIVMSG chanserv :UNQUIET $channel $args\n");
+					continue;
+				} elseif ($network=='libera' || $network=='other'){
+					$opqueue[]=['-q',explode(' ',$args)];
+					getops();
+					continue;
+				}
 			} elseif($trigger=='!fyc' && $network=='freenode'){
 				// check if mins provided
 				$arr=explode(' ',$args);
@@ -549,7 +559,7 @@ while(1){
 				getops();
 				continue;
 			} elseif($trigger=='!t' || $trigger=='!topic'){
-				if(in_array($network,['freenode','gamesurge','rizon'])) send("PRIVMSG ChanServ :TOPIC $channel $args\n");
+				if(in_array($network,['freenode','gamesurge','rizon','libera'])) send("PRIVMSG ChanServ :TOPIC $channel $args\n");
 				else {
 					$opqueue[]=['topic',null,['msg'=>$args]];
 					getops();
@@ -1682,21 +1692,30 @@ function doopdop(){
 			if(empty($who)) continue;
 			send("INVITE $who $channel\n");
 			if(empty($always_opped)) send("MODE $channel -o $nick\n");
+		} elseif($what=='+q'){
+			if(empty($always_opped)) send("MODE $channel +q-o $who $nick\n");
+			else send("MODE $channel +q $who\n");
+		} elseif($what=='-q'){
+			if(empty($always_opped)){
+				if(count($who)>3) $who=array_slice($who,0,3);
+				$mode='-'.str_repeat('q',count($who)).'o';
+				send("MODE $channel $mode ".implode(' ',$who)." $nick\n");
+			} else {
+				if(count($who)>4) $who=array_slice($who,0,4);
+				$mode='-'.str_repeat('q',count($who));
+				send("MODE $channel $mode ".implode(' ',$who)."\n");
+			}
 		} elseif($what=='+b'){
 			list($tmpmask,$tmpreason,$tmpnick,$tmptime)=$who;
-			if(!empty($tmpnick) && $network=='freenode') send("REMOVE $channel $tmpnick :$tmpreason\n");
 			if(empty($always_opped)){
-				if($network=='freenode') send("MODE $channel +b-o $tmpmask $nick\n");
-				else {
-					if(!empty($tmpnick)){
-						send("MODE $channel +b $tmpmask\n");
-						send("KICK $channel $tmpnick :$tmpreason\n");
-						send("MODE $channel -o $nick\n");
-					} else send("MODE $channel +b-o $tmpmask $nick\n"); // todo: find nick by mask and kick
-				}
+				if(!empty($tmpnick)){
+					send("MODE $channel +b $tmpmask\n");
+					send("KICK $channel $tmpnick :$tmpreason\n");
+					send("MODE $channel -o $nick\n");
+				} else send("MODE $channel +b-o $tmpmask $nick\n"); // todo: find nick by mask and kick
 			} else {
 				send("MODE $channel +b $tmpmask\n");
-				if(!empty($tmpnick) && $network<>'freenode') send("KICK $channel $tmpnick :$tmpreason\n");
+				if(!empty($tmpnick)) send("KICK $channel $tmpnick :$tmpreason\n");
 			}
 		} elseif($what=='-b'){
 			if(empty($always_opped)){
@@ -1978,8 +1997,12 @@ function cidr_match($ip,$range){
 }
 
 function timedquiet($secs=0,$mask){
-	global $channel,$datafile;
-	send("PRIVMSG chanserv :QUIET $channel $mask\n");
+	global $network,$channel,$datafile,$opqueue;
+	if($network=='freenode') send("PRIVMSG chanserv :QUIET $channel $mask\n");
+	elseif ($network=='libera') {
+		$opqueue[]=['+q',$mask];
+		getops();
+	}
 	if(is_numeric($secs) && $secs>0){
 		$botdata=json_decode(file_get_contents($datafile));
 		if(!isset($botdata->tq)) $botdata->tq=[]; else $botdata->tq=(array) $botdata->tq;
