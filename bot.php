@@ -144,7 +144,7 @@ while(1){
 					$ex=explode(' ',trim($data));
 					if(strpos($data,'CAP * LS')!==false && strpos($data,'sasl')!==false) send("CAP REQ :multi-prefix sasl\n");
 					if(strpos($data,'CAP * ACK')!==false) send("AUTHENTICATE PLAIN\n");
-					if(strpos($data,'AUTHENTICATE +')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
+					if(strpos($data,'AUTHENTICATE +')!==false || strpos($data,'AUTHENTICATE :+')!==false) send("AUTHENTICATE ".base64_encode("\0$user\0$pass")."\n");
 					// if($ex[1]=='900') $botmask=substr($ex[3],strpos($ex[3],'@')+1);
 					if(strpos($data,'SASL authentication successful')!==false){ send("CAP END\n"); break; }
 					if(empty($data) || strpos($data,"ERROR")!==false){ echo "ERROR authenticating with SASL, restarting in 5s..\n"; sleep(5); dorestart(null,false); }
@@ -367,10 +367,10 @@ while(1){
 		}
 		if($ex[1]=='354'){ // freenode, gamesurge, libera
 			$id=search_multi($users,'nick',$ex[4]);
-			if(empty($id)) $users[]=['nick'=>$ex[4],'host'=>$ex[3],'account'=>rtrim($ex[5])];
+			if(empty($id)) $users[]=['nick'=>$ex[4],'host'=>$ex[3],'account'=>ltrim(rtrim($ex[5]),':')];
 			else {
 				$users[$id]['host']=$ex[3];
-				$users[$id]['account']=rtrim($ex[5]);
+				$users[$id]['account']=ltrim(rtrim($ex[5]),':');
 			}
 			if($host_blacklist_enabled) check_blacklist($ex[4],$ex[3]);
 			// check_dnsbl($ex[7],$ex[5],true);
@@ -1655,7 +1655,7 @@ function isadmin(){
 	// todo: verify admins that send commands without being in channel user list
 	global $admins,$incnick,$users;
 	$r=search_multi($users,'nick',$incnick);
-	if(empty($r)) return false;
+	if($r===false) return false;
 	if(in_array($users[$r]['account'],$admins,true)) return true; else return false;
 }
 function isme(){
@@ -1891,7 +1891,7 @@ function covtime($yt){
 // search multi-dimensional array and return id
 function search_multi($arr,$key,$val){
 	foreach($arr as $k=>$v) if($v[$key]==$val) return $k;
-	return null;
+	return false;
 }
 
 function parsemask($mask){
