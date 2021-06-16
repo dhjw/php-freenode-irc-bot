@@ -1597,12 +1597,10 @@ while(1){
 			}
 		}
 
-		if(timedout() || empty($data) || ($ex[1]=='NOTICE' && strpos($data,':Server Terminating. Received SIGTERM')!==false) || (isme() && $ex[1]=='QUIT' && strpos($data,':Ping timeout')!==false)){ echo "Stream error, reconnecting...\n"; $connect=1; break; }
+		if(empty($data) || ($ex[1]=='NOTICE' && strpos($data,':Server Terminating. Received SIGTERM')!==false) || (isme() && $ex[1]=='QUIT' && strpos($data,':Ping timeout')!==false)) break;
 	}
-	if(timedout()){
-		echo "ERROR, timed out ({$stream_timeout}s), reconnecting..\n";
-		$connect=1;
-	}
+	echo "Stream closed or timed out, reconnecting..\n";
+	$connect=1;
 }
 // End Loop
 
