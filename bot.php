@@ -966,6 +966,7 @@ while(1){
 				}
 				$u_tries=0;
 				$invidious_mirror=false;
+				$og_title=false;
 				while(1){ // extra loop for retries
 					echo "Checking URL: $u\n";
 					$html='';
@@ -1449,29 +1450,7 @@ while(1){
 					}
 
 					// brighteon videos
-					if(preg_match('#https?://(?:www\.)?brighteon\.com#',$u)){
-						$html=curlget([CURLOPT_URL=>$u]);
-						$dom=new DOMDocument();
-						if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html)){
-							$x=new DOMXPath($dom);
-							list($n)=$x->query('//script[@id="__NEXT_DATA__"]');
-							if(!empty($n) && !empty($n->textContent)){
-								$j=json_decode(trim($n->textContent));
-								if(!empty($j) && !empty($j->props) && !empty($j->props->initialState) && !empty($j->props->initialState->videos) && !empty($j->props->initialState->videos->videoDetails) && !empty($j->props->initialState->videos->videoDetails->data)){
-									$t=strip_tags(html_entity_decode($j->props->initialState->videos->videoDetails->data->video->name,ENT_QUOTES | ENT_HTML5,'UTF-8'));
-									$t=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$t);
-									$t=trim(preg_replace('/\s+/',' ',$t));
-									$d=$j->props->initialState->videos->videoDetails->data->video->duration;
-									if(substr_count($d,':')>1) $d=ltrim($d,'0');
-									$t=str_shorten($t,424,['less'=>3+strlen($d)]);
-									$t="[ ".trim($t)." - $d ]";
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
-									continue(2);
-								}
-							}
-						}
-					}
+					if(preg_match('#https?://(?:www\.)?brighteon\.com#',$u)) $og_title=true;
 
 					// skips
 					$pathinfo=pathinfo($u);
@@ -1505,7 +1484,7 @@ while(1){
 					if(empty($html)) $html=str_replace('<<','&lt;&lt;',$html); // rottentomatoes bad title html
 					$dom=new DOMDocument();
 					if($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)){
-						if(!empty($title_og)){
+						if(!empty($title_og || $og_title)){
 							$list=$dom->getElementsByTagName("meta");
 							foreach($list as $l)
 								if(!empty($l->attributes->getNamedItem('property')))
