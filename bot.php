@@ -227,8 +227,6 @@ while(1){
 		// custom loop functions
 		foreach($custom_loop_functions as $f) if($f()==2) continue(2);
 
-		if(strpos($data,"ERROR :Closing Link:")!==false){ echo "ERROR, restarting..\n"; dorestart(null,false); }
-
 		// ongoing checks
 		if($time - $lasttime > 2 && $time - $connect_time > 10 && !$check_lock){
 			$check_lock=true;
