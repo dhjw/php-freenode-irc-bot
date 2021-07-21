@@ -965,6 +965,7 @@ while(1){
 				$u_tries=0;
 				$invidious_mirror=false;
 				$og_title=false;
+				$og_desc=false;
 				while(1){ // extra loop for retries
 					echo "Checking URL: $u\n";
 					$html='';
@@ -1450,6 +1451,12 @@ while(1){
 					// brighteon videos
 					if(preg_match('#https?://(?:www\.)?brighteon\.com#',$u)) $og_title=true;
 
+					// gab social
+					if(preg_match('#https://(?:www\.)?gab\.com/[^/]+/posts/(\d+)#',$u)){
+						$gab_post=true;
+						$og_desc=true;
+					} else $gab_post=false;
+
 					// skips
 					$pathinfo=pathinfo($u);
 					if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
@@ -1488,6 +1495,16 @@ while(1){
 								if(!empty($l->attributes->getNamedItem('property')))
 									if($l->attributes->getNamedItem('property')->value=='og:title' && !empty($l->attributes->getNamedItem('content')->value))
 										$title=$l->attributes->getNamedItem('content')->value;
+						}
+						if($og_desc){
+							$list=$dom->getElementsByTagName("meta");
+							foreach($list as $l)
+								if(!empty($l->attributes->getNamedItem('property')))
+									if($l->attributes->getNamedItem('property')->value=='og:description' && !empty($l->attributes->getNamedItem('content')->value))
+										$title=$l->attributes->getNamedItem('content')->value;
+							if($gab_post){
+								$title=rtrim(preg_replace('/'.preg_quote(": '",'/').'/',': ',$title,1),"'");
+							}
 						}
 						if(empty($title)){
 							$list=$dom->getElementsByTagName("title");
