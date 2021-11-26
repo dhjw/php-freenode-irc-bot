@@ -1457,6 +1457,11 @@ while(1){
 						$og_desc=true;
 					} else $gab_post=false;
 
+					// telegram (todo: use api to get message details i.e. whether has a video or image)
+					if(preg_match("#^https?://t\.me/#",$u,$m)){
+						$og_desc=true;
+					}
+
 					// skips
 					$pathinfo=pathinfo($u);
 					if(in_array($pathinfo['extension'],['gif','gifv','mp4','webm','jpg','jpeg','png','csv','pdf','xls','doc','txt','xml','json','zip','gz','bz2','7z','jar'])){ echo "skipping url due to extension \"{$pathinfo['extension']}\"\n"; continue(2); }
