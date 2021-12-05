@@ -130,6 +130,7 @@ while(1){
 			echo "Connecting...\n";
 			$botmask='';
 			if($custom_connect_ip) $socket_options=['socket'=>['bindto'=>"$connect_ip:0"]]; else $socket_options=[];
+			if($network=='freenode') $socket_options['ssl']=['verifypeer'=>'false'];
 			$socket_context=stream_context_create($socket_options);
 			$socket=stream_socket_client($host,$errno,$errstr,15,STREAM_CLIENT_CONNECT,$socket_context);
 			echo "* connect errno=$errno errstr=$errstr\n";
