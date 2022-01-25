@@ -1449,9 +1449,6 @@ while(1){
 						}
 					}
 
-					// brighteon videos
-					if(preg_match('#https?://(?:www\.)?brighteon\.com#',$u)) $og_title=true;
-
 					// gab social
 					if(preg_match('#https://(?:www\.)?gab\.com/[^/]+/posts/(\d+)#',$u)){
 						$gab_post=true;
@@ -1462,6 +1459,12 @@ while(1){
 					if(preg_match("#^https?://t\.me/#",$u,$m)){
 						$og_desc=true;
 					}
+
+					$og_title_urls_regex=[
+						'#https?://(?:www\.)?brighteon\.com#',
+						'#https?://(?:www\.)?campusreform\.org#',
+					];
+					foreach($og_title_urls_regex as $r) if(preg_match($r,$u)) $og_title=true;
 
 					// skips
 					$pathinfo=pathinfo($u);
