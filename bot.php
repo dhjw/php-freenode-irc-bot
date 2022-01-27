@@ -121,6 +121,12 @@ $users=[]; // user state data (nick, ident, host)
 $flood_lines=[];
 $base_msg_len=60;
 if(!isset($custom_loop_functions)) $custom_loop_functions=[];
+$title_cache_enabled=!empty($title_cache_enabled)?true:false;
+if($title_cache_enabled){
+	$title_cache_db='';
+	if(empty($title_cache_size)) $title_cache_size=64;
+	init_title_cache();
+}
 
 while(1){
 	if($connect){
@@ -963,6 +969,15 @@ while(1){
 					echo "Ignored URL $v\n";
 					continue(2);
 				}
+				// title cache
+				if($title_cache_enabled){
+					$r=get_from_title_cache($u);
+					if($r){
+						echo "Using title from cache\n";
+						send("PRIVMSG $channel :$r\n");
+						continue;
+					}
+				}
 				$u_tries=0;
 				$invidious_mirror=false;
 				$og_title=false;
@@ -1091,6 +1106,7 @@ while(1){
 									$e="[ $e ]";
 									if($title_bold) $e="\x02$e\x02";
 									send( "PRIVMSG $channel :$e\n");
+									if($title_cache_enabled) add_to_title_cache($u,$e);
 									continue(2);
 								}
 							}
@@ -1100,6 +1116,7 @@ while(1){
 								// no bolding
 								if(!empty($e)){
 									send( "PRIVMSG $channel :\"$e\"\n"); // else send( "PRIVMSG $channel :Wiki
+									if($title_cache_enabled) add_to_title_cache($u,"\"$o\"");
 									continue(2);
 								}
 							}
@@ -1117,6 +1134,7 @@ while(1){
 								$t="[ {$j->data->children[0]->data->title} ]";
 								if($title_bold) $t="\x02$t\x02";
 								send("PRIVMSG $channel :$t\n");
+								if($title_cache_enabled) add_to_title_cache($u,$t);
 								continue(3);
 							}
 						}
@@ -1143,6 +1161,7 @@ while(1){
 									$t="[ $a: \"$e\" ]";
 									if($title_bold) $t="\x02$t\x02";
 									send("PRIVMSG $channel :$t\n");
+									if($title_cache_enabled) add_to_title_cache($u,$t);
 									continue(3);
 								} else echo "error parsing reddit comment from html\n";
 							} else echo "error getting reddit comment\n";
@@ -1164,6 +1183,7 @@ while(1){
 									$t="[ $t ]";
 									if($title_bold) $t="\x02$t\x02";
 									send("PRIVMSG $channel :$t\n");
+									if($title_cache_enabled) add_to_title_cache($u,$t);
 									continue(3);
 								} else echo "error parsing reddit title from html\n";
 							} else echo "error getting reddit title\n";
@@ -1319,6 +1339,7 @@ while(1){
 									$t="[ $t ]";
 									if($title_bold) $t="\x02$t\x02";
 									send("PRIVMSG $channel :$t\n");
+									if($title_cache_enabled) add_to_title_cache($u,$t);
 									continue(2);
 								}
 							}
@@ -1356,9 +1377,11 @@ while(1){
 								$t='[ '.trim($t).' ]';
 								if($title_bold) $t="\x02$t\x02";
 								send("PRIVMSG $channel :$t\n");
+								if($title_cache_enabled) add_to_title_cache($u,$t);
 								continue(2);
 							} else {
 								send("PRIVMSG $channel :[ Post not found ]\n");
+								if($title_cache_enabled) add_to_title_cache($u,"[ Post not found ]");
 								continue(2);
 							}
 						} else echo "Error parsing Parler HTML\n";
@@ -1369,6 +1392,7 @@ while(1){
 							$t="[ @{$m[1]} - ".ucfirst($m[2])." ]";
 							if($title_bold) $t="\x02$t\x02";
 							send("PRIVMSG $channel :$t\n");
+							if($title_cache_enabled) add_to_title_cache($u,$t);
 							continue(2);
 					}
 
@@ -1553,6 +1577,7 @@ while(1){
 						$title="[ $title ]";
 						if($title_bold) $title="\x02$title\x02";
 						send( "PRIVMSG $channel :$title\n");
+						if($title_cache_enabled) add_to_title_cache($u,$title);
 						break;
 					} else {
 						if(strpos($u,'//twitter.com/')!==false){ // retry twitter
@@ -2171,4 +2196,32 @@ function register_loop_function($f){
 		echo "Adding custom loop function \"$f\"\n";
 		$custom_loop_functions[]=$f;
 	} else echo "Skipping duplicate custom loop function \"$f\"\n";
+}
+
+function init_title_cache(){
+	global $title_cache_db;
+	if(function_exists('posix_getuid')) $p='/run/user/'.posix_getuid(); else $p='.';
+	if(!file_exists($p)) $p='.';
+	$title_cache_db=new SQLite3("$p/title_cache.db");
+	$title_cache_db->busyTimeout(10000);
+	$r=$title_cache_db->querySingle("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='titles';");
+	if($r==0) $title_cache_db->query("CREATE TABLE titles (url text NOT NULL,title text NOT NULL); CREATE INDEX url on titles(url)");
+}
+
+function add_to_title_cache($u,$t){
+	global $title_cache_db,$title_cache_size;
+	$s=$title_cache_db->prepare('INSERT INTO titles VALUES(:url,:title)');
+	$s->bindValue(':url',$u);
+	$s->bindValue(':title',$t);
+	$r=$s->execute();
+	$title_cache_db->query("DELETE FROM titles WHERE ROWID IN (SELECT ROWID FROM titles ORDER BY ROWID DESC LIMIT -1 OFFSET $title_cache_size)");
+}
+
+function get_from_title_cache($u){
+	global $title_cache_db;
+	$s=$title_cache_db->prepare('SELECT title FROM titles WHERE url = :url LIMIT 1;');
+	$s->bindValue(':url',$u);
+	$r=$s->execute();
+	$r=$r->fetchArray(SQLITE3_NUM);
+	return $r?$r[0]:false;
 }
