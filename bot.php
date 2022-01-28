@@ -982,6 +982,7 @@ while(1){
 				$invidious_mirror=false;
 				$og_title=false;
 				$og_desc=false;
+				$og_skip_blank=false;
 				while(1){ // extra loop for retries
 					echo "Checking URL: $u\n";
 					$html='';
@@ -1482,6 +1483,7 @@ while(1){
 					// telegram (todo: use api to get message details i.e. whether has a video or image)
 					if(preg_match("#^https?://t\.me/#",$u,$m)){
 						$og_desc=true;
+						$og_skip_blank=true;
 					}
 
 					$og_title_urls_regex=[
@@ -1528,6 +1530,7 @@ while(1){
 								if(!empty($l->attributes->getNamedItem('property')))
 									if($l->attributes->getNamedItem('property')->value=='og:title' && !empty($l->attributes->getNamedItem('content')->value))
 										$title=$l->attributes->getNamedItem('content')->value;
+							if(empty($title) && $og_skip_blank) continue(2);
 						}
 						if($og_desc){
 							$list=$dom->getElementsByTagName("meta");
@@ -1535,6 +1538,7 @@ while(1){
 								if(!empty($l->attributes->getNamedItem('property')))
 									if($l->attributes->getNamedItem('property')->value=='og:description' && !empty($l->attributes->getNamedItem('content')->value))
 										$title=$l->attributes->getNamedItem('content')->value;
+							if(empty($title) && $og_skip_blank) continue(2);
 							if($gab_post){
 								$title=rtrim(preg_replace('/'.preg_quote(": '",'/').'/',': ',$title,1),"'");
 							}
