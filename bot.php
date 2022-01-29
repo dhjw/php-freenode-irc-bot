@@ -1117,7 +1117,7 @@ while(1){
 								// no bolding
 								if(!empty($e)){
 									send( "PRIVMSG $channel :\"$e\"\n"); // else send( "PRIVMSG $channel :Wiki
-									if($title_cache_enabled) add_to_title_cache($u,"\"$o\"");
+									if($title_cache_enabled) add_to_title_cache($u,"\"$e\"");
 									continue(2);
 								}
 							}
