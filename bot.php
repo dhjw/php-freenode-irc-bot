@@ -2041,8 +2041,7 @@ function timedquiet($secs=0,$mask){
 	if(is_numeric($secs) && $secs>0){
 		$botdata=json_decode(file_get_contents($datafile));
 		if(!isset($botdata->tq)) $botdata->tq=[]; else $botdata->tq=(array) $botdata->tq;
-		foreach($botdata->tq as $k=>$tq){ $tq=explode('|',$tq); echo "tq[2]={$tq[2]} mask=$mask"; if($tq[2]==$mask){ echo "removing dupe\n"; unset($botdata->tq[$k]); continue; } }
-		$botdata=array_values($botdata);
+		foreach($botdata->tq as $k=>$tq){ $tq=explode('|',$tq); echo "tq[2]={$tq[2]} mask=$mask"; if($tq[2]==$mask){ echo "removing dupe\n"; unset($botdata->tq[$k]); $botdata->tq=array_values($botdata->tq); continue; } }
 		$botdata->tq[]=time()."|$secs|$mask";
 		file_put_contents($datafile,json_encode($botdata));
 	}
