@@ -989,7 +989,7 @@ while(1){
 
 					// imgur via api
 					// single image post ids are usually accessible as an image rather than an album so first check if an image then an album
-					if(!empty($imgur_client_id) && preg_match('#^https?://(i\.)?imgur\.com/(?:(?:gallery|a|r)/)?(\w+)(?:/(\w+))?#',$u,$m)){
+					if(!empty($imgur_client_id) && preg_match('#^https?://((?:i|m)\.)?imgur\.com/(?:(?:gallery|a|r)/)?(\w+)(?:/(\w+))?#',$u,$m)){
 						echo "getting from imgur api..\n";
 						if(!empty($m[3])) $id=$m[3]; else $id=$m[2];
 						$r=json_decode(curlget([CURLOPT_URL=>"https://api.imgur.com/3/image/$id",CURLOPT_HTTPHEADER=>["Authorization: Client-ID $imgur_client_id"]]));
