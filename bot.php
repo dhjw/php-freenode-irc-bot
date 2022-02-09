@@ -1562,7 +1562,7 @@ while(1){
 					$title=preg_replace('/(&#[0-9]+;)/','',$title);
 					$title=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$title);
 					$title=trim(preg_replace('/\s+/',' ',$title));
-					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet','Login • Instagram','Access denied .* used Cloudflare to restrict access','Amazon.* Something Went Wrong.*','Sorry! Something went wrong!','Bloomberg - Are you a robot?','Attention Required! | Cloudflare','Access denied','Access Denied'];
+					$notitletitles=['imgur: the simple image sharer','Imgur','Imgur: The most awesome images on the Internet','Login • Instagram','Access denied .* used Cloudflare to restrict access','Amazon.* Something Went Wrong.*','Sorry! Something went wrong!','Bloomberg - Are you a robot?','Attention Required! | Cloudflare','Access denied','Access Denied','Please Wait... | Cloudflare'];
 					foreach($notitletitles as $ntt){
 						if(preg_match('/^'.str_replace('\.\*','.*',preg_quote($ntt)).'$/',$title)){
 							echo "Skipping output of title: $title\n";
