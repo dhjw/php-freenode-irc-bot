@@ -1021,9 +1021,9 @@ while(1){
 					if(!empty($youtube_api_key)){
 						$yt='';
 						if(preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/(?:watch\?.*v=|embed/)([a-zA-Z0-9-_]+)#',$u,$m) || preg_match('#^https?://(?:youtu\.be|invidio\.us)/([a-zA-Z0-9-_]+)/?(?:$|\?)#',$u,$m)) $yt='v';
-						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='c';
+						elseif(preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='c';
 						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)) $yt='u';
-						elseif(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/playlist\?.*list=([a-zA-Z0-9-_]+)#',$u,$m)) $yt='p';
+						elseif(preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/playlist\?.*list=([a-zA-Z0-9-_]+)#',$u,$m)) $yt='p';
 						if(empty($yt)){ // custom channel URLs like /example or /c/example require scraping as no API endpoint
 							if(preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/(?:c/)?([a-zA-Z0-9-_]+)/?(\w*)#',$u,$m)){
 								$html=curlget([CURLOPT_URL=>"https://www.youtube.com/{$m[1]}".(!empty($m[2])?"/{$m[2]}":'')]); // force load from youtube so indvidio.us works
