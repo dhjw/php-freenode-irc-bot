@@ -1485,6 +1485,12 @@ while(1){
 						$og_desc=true;
 						$og_skip_blank=true;
 					}
+					
+					// poa.st
+					if(preg_match("#^https?://poa\.st/@[^/]+/posts/#",$u) || preg_match("#^https?://poa\.st/notice/#",$u) ){
+						$og_desc=true;
+						$og_skip_blank=true;
+					}
 
 					$og_title_urls_regex=[
 						'#https?://(?:www\.)?brighteon\.com#',
