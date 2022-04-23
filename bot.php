@@ -127,6 +127,7 @@ if($title_cache_enabled){
 	if(empty($title_cache_size)) $title_cache_size=64;
 	init_title_cache();
 }
+$title_bold = !empty($title_bold) ? "\x02" : '';
 
 while(1){
 	if($connect){
@@ -974,7 +975,7 @@ while(1){
 					$r=get_from_title_cache($u);
 					if($r){
 						echo "Using title from cache\n";
-						send("PRIVMSG $channel :$r\n");
+						send("PRIVMSG $channel :$title_bold$r$title_bold\n");
 						continue;
 					}
 				}
@@ -1009,8 +1010,7 @@ while(1){
 							}
 							if(!empty($o)){
 								$o="[ $o ]";
-								if($title_bold) $o="\x02$o\x02";
-								send("PRIVMSG $channel :$o\n");
+								send("PRIVMSG $channel :$title_bold$o$title_bold\n");
 							} else echo (!empty($m[1])?'image':'post')." exists but no description, skipping output\n";
 							continue(2);
 						}
@@ -1070,8 +1070,7 @@ while(1){
 									}
 								}
 								$t="[ {$r->items[0]->snippet->title}$x ]";
-								if($title_bold) $t="\x02$t\x02";
-								send("PRIVMSG $channel :$t\n");
+								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								continue(2);
 							}
 						}
@@ -1105,8 +1104,7 @@ while(1){
 								}
 								if(!empty($e)){
 									$e="[ $e ]";
-									if($title_bold) $e="\x02$e\x02";
-									send( "PRIVMSG $channel :$e\n");
+									send( "PRIVMSG $channel :$title_bold$e$title_bold\n");
 									if($title_cache_enabled) add_to_title_cache($u,$e);
 									continue(2);
 								}
@@ -1133,8 +1131,7 @@ while(1){
 							$j=json_decode(curlget([CURLOPT_URL=>"https://www.reddit.com/search.json?q=site:redd.it+url:$q"]));
 							if(isset($j->data) && isset($j->data->children) && isset($j->data->children[0])){
 								$t="[ {$j->data->children[0]->data->title} ]";
-								if($title_bold) $t="\x02$t\x02";
-								send("PRIVMSG $channel :$t\n");
+								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								if($title_cache_enabled) add_to_title_cache($u,$t);
 								continue(3);
 							}
@@ -1160,8 +1157,7 @@ while(1){
 								$e=format_extract($e,280);
 								if(!empty($e)){
 									$t="[ $a: \"$e\" ]";
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
+									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 									if($title_cache_enabled) add_to_title_cache($u,$t);
 									continue(3);
 								} else echo "error parsing reddit comment from html\n";
@@ -1182,8 +1178,7 @@ while(1){
 								$t=format_extract($t,280,['keep_quotes'=>1]);
 								if(!empty($t)){
 									$t="[ $t ]";
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
+									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 									if($title_cache_enabled) add_to_title_cache($u,$t);
 									continue(3);
 								} else echo "error parsing reddit title from html\n";
@@ -1258,8 +1253,7 @@ while(1){
 									$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
 									$t=trim(preg_replace('/\s+/',' ',$t));
 									$t='[ '.str_shorten("{$r->user->name}: $t").' ]';
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
+									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								} else {
 									echo "failed. result=".print_r($r,true);
 									send("PRIVMSG $channel :Tweet not found.\n");
@@ -1291,8 +1285,7 @@ while(1){
 										$t.=" | $u";
 									}
 									$t="[ $t ]";
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
+									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 									continue(2); // only abort if found, else might be a non-profile URL
 								} else {
 									echo "failed. result=".print_r($r,true);
@@ -1338,8 +1331,7 @@ while(1){
 									} else $t="$n:";
 									if(!empty($p)) $t.=" ($p)";
 									$t="[ $t ]";
-									if($title_bold) $t="\x02$t\x02";
-									send("PRIVMSG $channel :$t\n");
+									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 									if($title_cache_enabled) add_to_title_cache($u,$t);
 									continue(2);
 								}
@@ -1376,8 +1368,7 @@ while(1){
 									}
 								}
 								$t='[ '.trim($t).' ]';
-								if($title_bold) $t="\x02$t\x02";
-								send("PRIVMSG $channel :$t\n");
+								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								if($title_cache_enabled) add_to_title_cache($u,$t);
 								continue(2);
 							} else {
@@ -1391,8 +1382,7 @@ while(1){
 					// parler profile
 					if(preg_match('#^https?://parler\.com/profile/(\w*)/(\w*)#',$u,$m)){
 							$t="[ @{$m[1]} - ".ucfirst($m[2])." ]";
-							if($title_bold) $t="\x02$t\x02";
-							send("PRIVMSG $channel :$t\n");
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 							if($title_cache_enabled) add_to_title_cache($u,$t);
 							continue(2);
 					}
@@ -1410,8 +1400,7 @@ while(1){
 							} else {
 								if(isset($r->message)) echo "error: {$r->message}\n"; else echo "error, r=".print_r($r,true);
 								$t='[ API error ]';
-								if($title_bold) $t="\x02$t\x02";
-								send("PRIVMSG $channel :$t\n");
+								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								$twitch_token='';
 								$twitch_token_expires=0;
 								continue(2);
@@ -1429,8 +1418,7 @@ while(1){
 									if(!empty($m[2])){
 										// just show subdir
 										$t="[ $un: ".ucfirst(substr($m[2],1))." ]";
-										if($title_bold) $t="\x02$t\x02";
-										send("PRIVMSG $channel :$t\n");
+										send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 										continue(2);
 									} else {
 										// get live stream info - https://dev.twitch.tv/docs/api/reference#get-streams-metadata
@@ -1445,8 +1433,7 @@ while(1){
 													$t=trim(preg_replace('/\s+/',' ',$t));
 													$t=str_shorten($t,424);
 													$t="[ $t ]";
-													if($title_bold) $t="\x02$t\x02";
-													send("PRIVMSG $channel :$t\n");
+													send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 													continue(3);
 												}
 											}
@@ -1456,8 +1443,7 @@ while(1){
 											$t=trim(preg_replace('/\s+/',' ',$t));
 											$t=str_shorten($t,424);
 											$t="[ $t ]";
-											if($title_bold) $t="\x02$t\x02";
-											send("PRIVMSG $channel :$t\n");
+											send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 											continue(2);
 										} else {
 											if(isset($r->message)) echo "error: {$r->message}\n"; else echo "error, r=".print_r($r,true);
@@ -1518,9 +1504,8 @@ while(1){
 					if(empty($html)){
 						if(strpos($curl_error,'SSL certificate problem')!==false){
 							echo "set \$allow_invalid_certs=true; in settings to skip certificate checking\n";
-							$title='[ SSL certificate problem ]';
-							if($title_bold) $title="\x02$title\x02";
-							send("PRIVMSG $channel :$title\n");
+							$t='[ SSL certificate problem ]';
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 							continue(2);
 						}
 						echo "Error: response blank\n";
@@ -1585,8 +1570,7 @@ while(1){
 					$title=str_shorten($title,438);
 					if($title){
 						$title="[ $title ]";
-						if($title_bold) $title="\x02$title\x02";
-						send( "PRIVMSG $channel :$title\n");
+						send( "PRIVMSG $channel :$title_bold$title$title_bold\n");
 						if($title_cache_enabled) add_to_title_cache($u,$title);
 						break;
 					} else {
