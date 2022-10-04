@@ -962,7 +962,7 @@ while(1){
 
 		// URL Titles
 		if($ex[1]=='PRIVMSG' && $ex[2]==$channel && !isme() && !$disable_titles){
-			preg_match_all('#\bhttps?://(?:\b[a-z\d-]{1,63}\b\.)+[a-z]+(?:[/?\#](?:([^\s`!\[\]{}();\'"<>«»“”‘’]+)|\((?1)?\))+(?<![.,]))?#i',$msg,$m); // get urls, only capture parenthesis if both are found, ignore trailing periods and commas
+			preg_match_all('#\bhttps?://(?:\b[a-z\d-]{1,63}\b\.)+[a-z]+(?::\d+)?(?:[/?\#](?:([^\s`!\[\]{}();\'"<>«»“”‘’]+)|\((?1)?\))+(?<![.,]))?#i',$msg,$m); // get urls, only capture parenthesis if both are found, ignore trailing periods and commas
 			if(!empty($m[0])) $urls=array_unique($m[0]); else $urls=[];
 			foreach($urls as $u){
 				$u=rtrim($u,pack('C',0x01)); // trim for ACTIONs
