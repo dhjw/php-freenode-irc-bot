@@ -18,8 +18,8 @@ function bible(){
 		$verses=[];
 		for($i=$m[3];$i<=$m[4];$i++) $verses[]=$i;
 	}
-	if(count($verses)>5){
-		send("PRIVMSG $target :Max 5 verses at a time\n");
+	if(count($verses)>10){
+		send("PRIVMSG $target :Max 10 verses at a time\n");
 		return;
 	}
 
