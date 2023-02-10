@@ -20,6 +20,8 @@ if(!empty($argv[2])){
 // load data
 $instance_hash=md5(file_get_contents(dirname(__FILE__).'/bot.php'));
 $botdata=json_decode(file_get_contents($datafile));
+if(!is_object($botdata)) $botdata=new stdClass();
+
 if(isset($botdata->nick)) $nick=$botdata->nick;
 if(empty($network) || !in_array($network,['freenode','rizon','gamesurge','libera','other'])){
 	echo "Missing or invalid \$network setting. Using default Freenode.\n";
@@ -220,7 +222,7 @@ while(1){
 			preg_match('/^:[^\ ]*?\ PRIVMSG\ [^\ ]*?\ :(([^\ ]*?)(\ .*)?)\r\n$/',$data,$m);
 			$msg=trim($m[1]);
 			$trigger=$m[2];
-			if(!empty(trim($m[3]))) $args=trim($m[3]); else $args='';
+			if(!empty($m[3]) && !empty(trim($m[3]))) $args=trim($m[3]); else $args='';
 			if($ex[2]==$nick) $privto=$incnick; else $privto=$channel; // for PM response
 			$baselen=$base_msg_len+strlen($privto); // for str_shorten max length
 		} else {
@@ -1230,9 +1232,19 @@ while(1){
 							if(!empty($m[1])){
 								$r=twitter_api('/statuses/show.json',['id'=>$m[1],'tweet_mode'=>'extended']);
 								if(!empty($r) && !empty($r->full_text) && !empty($r->user->name)){
-									echo "ok\n";
 									$t=$r->full_text;
-									// replace twitter media URLs that lead back to twitter anyway
+									// remove twitter media URLs that lead back to the same tweet in long tweets
+									if(isset($r->entities) && isset($r->entities->urls)){
+										foreach($r->entities->urls as $v){
+											if(preg_match('#^https://twitter.com/i/web/status/(\d+)#',$v->expanded_url,$m2)){
+												if(!empty($m2[1]) && $m2[1]==$m[1]){
+													$t=str_replace("… {$v->url}",' ...',$t);
+													$t=trim(str_replace(" {$v->url}",' ',$t));
+												}
+											}
+										}
+									}
+
 									$mcnt=0;
 									$mtyp='';
 									foreach($r->extended_entities->media as $v){
@@ -1970,7 +1982,7 @@ function dnsbl_msg($nick){
 }
 
 function check_blacklist($nick,$host){
-	global $host_blacklist_strings, $host_blacklist_ips, $channel;
+	global $host_blacklist_strings, $host_blacklist_ips, $host_blacklist_time, $channel;
 	echo "Checking blacklist, nick: $nick host: $host\n";
 
 	// ip check
