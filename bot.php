@@ -1264,6 +1264,17 @@ while(1){
 									$t=str_replace(["\r\n","\n","\t"],' ',$t);
 									$t=html_entity_decode($t,ENT_QUOTES | ENT_HTML5,'UTF-8');
 									$t=trim(preg_replace('/\s+/',' ',$t));
+									if(substr($t,0,1)=='@'){ // strip additional handles at beginning of deep replies
+										$front=true;
+										$tmps=explode(' ',$t);
+										foreach($tmps as $k=>$tmp){
+											if($k==0){ $tmp2=$tmp; continue; }
+											if(substr($tmp,0,1)=='@' && $front==true) continue;
+											$front=false;
+											$tmp2.=" $tmp";
+										}
+										$t=$tmp2;
+									}
 									$t='[ '.str_shorten("{$r->user->name}: $t").' ]';
 									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								} else {
