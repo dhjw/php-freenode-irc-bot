@@ -1279,7 +1279,7 @@ while(1){
 									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								} else {
 									echo "failed. result=".print_r($r,true);
-									send("PRIVMSG $channel :Tweet not found.\n");
+									if(!empty($r->errors) && ($r->errors[0]->code==8 || $r->errors[0]->code==144)) send("PRIVMSG $channel :Tweet not found.\n");
 								}
 								continue(2); // always abort, won't be a non-tweet URL
 							}
