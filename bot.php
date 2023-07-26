@@ -130,6 +130,7 @@ if($title_cache_enabled){
 	init_title_cache();
 }
 $title_bold = !empty($title_bold) ? "\x02" : '';
+if(empty($twitter_nitter_instance)) $twitter_nitter_instance='https://nitter.net';
 
 while(1){
 	if($connect){
@@ -1223,6 +1224,105 @@ while(1){
 							$outline=true;
 						} else $outline=false;
 					} else $outline=false;
+
+					// twitter via Nitter
+					if(!empty($twitter_nitter_enabled)){
+						// tweet
+						if(preg_match('#^https?://(?:mobile\.)?twitter\.com/(?:\#!/)?(?:\w+)/status(?:es)?/(\d+)#',$u,$m)){
+							echo "Getting tweet via Nitter\n";
+							$html=curlget([CURLOPT_URL=>"$twitter_nitter_instance/x/status/{$m[1]}"]);
+							if(empty($html)) continue(2);
+							$dom=new DomDocument();
+							@$dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>'.$html);
+							$f=new DomXPath($dom);
+							// unavailable
+							$n=$f->query("//div[contains(@id, 'm')]//div[contains(@class, 'unavailable-box')]");
+							if(!empty($n) && $n->length>0){
+								if(strpos($n[0]->nodeValue,'Age-restricted')!==false){
+									$t="[ Age-restricted. Log in required. ]";
+									send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+									if($title_cache_enabled) add_to_title_cache($u,$t);
+								}
+								echo "Tweet unavailable: {$n[0]->nodeValue}\n";
+								continue(2);
+							}
+							$n=$f->query("//div[contains(@id, 'm')]//a[contains(@class, 'fullname')]");
+							if(empty($n) || $n->length===0){ echo "no fullname\n"; continue(2); }
+							$a=$n[0]->nodeValue;
+							$n=$f->query("//div[contains(@id, 'm')]//div[contains(@class, 'tweet-content')]");
+							if(empty($n) || $n->length===0){ echo "no tweet content\n"; continue(2); }
+							$b=$n[0]->ownerDocument->saveHTML($n[0]); // get raw html incl anchor tags
+
+							$b=html_entity_decode($b);
+							$b=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$b);
+							$b=trim(preg_replace('/\s+/',' ',$b));
+							$b=preg_replace('#^<div.*?>(.*)</div>$#','$1',$b);
+							// if has quote-link add it and purge quote node so its attachments arent found
+							$n=$f->query("//div[contains(@id, 'm')]//a[contains(@class, 'quote-link')]");
+							if(!empty($n) && $n->length>0){
+								$h=$n[0]->getAttribute('href');
+								if(substr($h,0,1)=='/') $h="https://twitter.com$h"; // may always be true
+								$h=preg_replace('/#m$/','',$h);
+								$b.=" <a href=\"$h\"></a>"; // anchorize for shortening
+								$n=$f->query("//div[contains(@id, 'm')]//div[contains(@class, 'quote quote-big')]");
+								if(!empty($n) && $n->length>0) $n[0]->parentNode->removeChild($n[0]);
+							}
+							// shorten and add hint for links, except ^@ and ^#
+							if(preg_match_all('#<a href=.*?>.*?</a>#',$b,$m) && !empty($m[0])){
+								foreach($m[0] as $v){
+									preg_match('#<a href="([^"]*)".*>(.*)</a>#',$v,$m2); // m2[0] full anchor [1] href [2] text
+									if(preg_match('/^(?:@|#)/',$m2[2])){
+										$b=str_replace($m2[0],$m2[2],$b);
+										continue;
+									}
+									if(substr($m2[1],0,28)=='https://nitter.net/i/spaces/'){
+										// only link directly to space if mid-sentence as has no like, reply, etc.
+										if(preg_match('#'.preg_quote($m2[0]).'$#',$b)){
+											$b=preg_replace('#'.preg_quote($m2[0]).'$#','(space)',$b);
+											continue;
+										} else $m2[1]=str_replace('https://nitter.net/i/spaces/','https://twitter.com/i/spaces/',$m2[1]);
+									}									
+									if(substr($m2[1],0,1)=='/') $m2[1]=="https://twitter.com{$m2[1]}";
+									$s=make_bitly_url($m2[1]);
+									if($s<>$m2[1]){
+										$h=get_url_hint($m2[1]);
+										if(strlen("$s ($h)")<strlen($m2[1])) $b=str_replace($m2[0],"$s ($h)",$b);
+										else $b=str_replace($m2[0],$m2[1],$b); // short+hint not shorter
+									} else $b=str_replace($m2[0],$m2[1],$b); // no token or already bitlyd
+								}
+							}
+							// strip additional handles at beginning of deep replies
+							if(substr($b,0,1)=='@'){
+								$front=true;
+								$tmps=explode(' ',$t);
+								foreach($tmps as $k=>$tmp){
+									if($k==0){ $tmp2=$tmp; continue; }
+									if(substr($tmp,0,1)=='@' && $front==true) continue;
+									$front=false;
+									$tmp2.=" $tmp";
+								}
+								$b=$tmp2;
+							}
+							// pre-finalize
+							$t="$a: $b";
+							$t=str_shorten($t,280);
+							// count attachments
+							foreach(['image','gif','video'] as $m){
+								$n = $f->query("//div[contains(@id, 'm')]//div[contains(@class, 'attachment') and contains(@class, '$m')]");
+								if(!empty($n) && $n->length>0) $t=trim($t).($n->length==1?" ($m)":" ({$n->length} {$m}s)");
+							}
+							$n = $f->query("//div[contains(@id, 'm')]//div[contains(@class, 'poll')]");
+							if(!empty($n) && $n->length>0) $t=trim($t).' (poll)';
+							// finalize and output
+							$t="[ $t ]";
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+							if($title_cache_enabled) add_to_title_cache($u,$t);
+							continue(2);
+						// todo:bio
+						} elseif(preg_match("#^https?://(?:mobile\.)?twitter\.com/(\w*)(?:[\?\#].*)?$#",$u,$m)){
+							continue(2);
+						}
+					}
 
 					// twitter via API
 					if(!empty($twitter_consumer_key)){
