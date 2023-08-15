@@ -1305,7 +1305,7 @@ while(1){
 							}
 							// pre-finalize
 							$t="$a: $b";
-							$t=str_shorten($t,280);
+							$t=str_shorten($t,mb_strlen($a)+282);
 							// count attachments
 							foreach(['image','gif','video'] as $m){
 								$n = $f->query("//div[contains(@id, 'm')]//div[contains(@class, 'attachment') and contains(@class, '$m')]");
