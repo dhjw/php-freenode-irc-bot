@@ -1275,12 +1275,12 @@ while(1){
 										$b=str_replace($m2[0],$m2[2],$b);
 										continue;
 									}
-									if(substr($m2[1],0,28)=='https://nitter.net/i/spaces/'){
+									if(preg_match('#^https?://[^/]*/i/spaces/#',$m2[1])){
 										// only link directly to space if mid-sentence as has no like, reply, etc.
 										if(preg_match('#'.preg_quote($m2[0]).'$#',$b)){
 											$b=preg_replace('#'.preg_quote($m2[0]).'$#','(space)',$b);
 											continue;
-										} else $m2[1]=str_replace('https://nitter.net/i/spaces/','https://twitter.com/i/spaces/',$m2[1]);
+										} else $m2[1]=preg_replace('#^https?://[^/]*/i/spaces/#','https://twitter.com/i/spaces/',$m2[1]);
 									}									
 									if(substr($m2[1],0,1)=='/') $m2[1]=="https://twitter.com{$m2[1]}";
 									$s=make_bitly_url($m2[1]);
