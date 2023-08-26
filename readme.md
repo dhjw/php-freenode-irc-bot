@@ -58,7 +58,7 @@ include('plugins/example.php');
 ```
 
 ## Contact
-Hit up `dw1` on Freenode with any questions or bugs.
+Hit up `dw1` on Libera or Rizon with any questions or bugs.
 
 ## License
-Do whatever you want with it.
+[Do whatever you want with it.](https://github.com/dhjw/php-freenode-irc-bot/blob/master/LICENSE)
