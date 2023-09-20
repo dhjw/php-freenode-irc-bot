@@ -1268,6 +1268,8 @@ while(1){
 								if(!empty($n) && $n->length>0) $n[0]->parentNode->removeChild($n[0]);
 							}
 							// shorten and add hint for links, except ^@ and ^#
+							$hl=0; // track hint lengths to increase max tweet length so never cut off
+							$b=preg_replace('#https?://nitter.net/#','https://twitter.com/',$b); // handling nitter.net is unreliable
 							if(preg_match_all('#<a href=.*?>.*?</a>#',$b,$m) && !empty($m[0])){
 								foreach($m[0] as $v){
 									preg_match('#<a href="([^"]*)".*>(.*)</a>#',$v,$m2); // m2[0] full anchor [1] href [2] text
@@ -1281,14 +1283,19 @@ while(1){
 											$b=preg_replace('#'.preg_quote($m2[0]).'$#','(space)',$b);
 											continue;
 										} else $m2[1]=preg_replace('#^https?://[^/]*/i/spaces/#','https://twitter.com/i/spaces/',$m2[1]);
-									}									
+									}
 									if(substr($m2[1],0,1)=='/') $m2[1]=="https://twitter.com{$m2[1]}";
-									$s=make_bitly_url($m2[1]);
-									if($s<>$m2[1]){
-										$h=get_url_hint($m2[1]);
-										if(strlen("$s ($h)")<strlen($m2[1])) $b=str_replace($m2[0],"$s ($h)",$b);
-										else $b=str_replace($m2[0],$m2[1],$b); // short+hint not shorter
-									} else $b=str_replace($m2[0],$m2[1],$b); // no token or already bitlyd
+									// shorten displayed link if possible, add hint if needed
+									$fu=get_final_url($m2[1]);
+									$s=make_bitly_url($fu);
+									if(mb_strlen($s)<mb_strlen($m2[1])) $m2[1]=$s;
+									$h=get_url_hint($fu);
+									if($h<>get_url_hint($m2[1])){
+										if(mb_strlen("$m2[1] ($h)")<mb_strlen($fu)){
+											$b=str_replace($m2[0],"$m2[1] ($h)",$b);
+											$hl+=mb_strlen($h)+3;
+										} else $b=str_replace($m2[0],$fu,$b); // no hint, final url < short+hint
+									} else $b=str_replace($m2[0],$m2[1],$b); // no hint, same as displayed domain
 								}
 							}
 							// strip additional handles at beginning of deep replies
@@ -1305,7 +1312,7 @@ while(1){
 							}
 							// pre-finalize
 							$t="$a: $b";
-							$t=str_shorten($t,mb_strlen($a)+282);
+							$t=str_shorten($t,mb_strlen($a)+282+$hl);
 							// count attachments
 							foreach(['image','gif','video'] as $m){
 								$n = $f->query("//div[contains(@id, 'm')]//div[contains(@class, 'attachment') and contains(@class, '$m')]");
@@ -1951,10 +1958,16 @@ function make_bitly_url($url){
 	return 'https://'.$r->id;
 }
 
+
 // get url hint e.g. https://one.microsoft.com -> microsoft.com, https://www.telegraph.co.uk -> telegraph.co.uk
 function get_url_hint($u){
-	if(preg_match('@https?://([^/#?]*)@',$u,$m)) return get_base_domain($m[1]);
-	else return false; // shouldnt happen as we always pass urls
+	return get_base_domain(parse_url($u,PHP_URL_HOST));
+}
+
+function get_final_url($u){
+	global $curl_info;
+	$r=curlget([CURLOPT_URL=>$u,CURLOPT_NOBODY=>1]);
+	return !empty($curl_info['EFFECTIVE_URL'])?$curl_info['EFFECTIVE_URL']:$u;
 }
 
 // get base domain considering public suffix from https://publicsuffix.org/list/
