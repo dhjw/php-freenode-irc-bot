@@ -1257,13 +1257,14 @@ while(1){
 							$b=str_replace(["\r\n","\n","\t","\xC2\xA0"],' ',$b);
 							$b=trim(preg_replace('/\s+/',' ',$b));
 							$b=preg_replace('#^<div.*?>(.*)</div>$#','$1',$b);
-							// if has quote-link add it and purge quote node so its attachments arent found
+							// if has quote-link save it and purge node so its attachments arent found
+							$ql='';
 							$n=$f->query("//div[contains(@id, 'm')]//a[contains(@class, 'quote-link')]");
 							if(!empty($n) && $n->length>0){
 								$h=$n[0]->getAttribute('href');
 								if(substr($h,0,1)=='/') $h="https://twitter.com$h"; // may always be true
 								$h=preg_replace('/#m$/','',$h);
-								$b.=" <a href=\"$h\"></a>"; // anchorize for shortening
+								$ql=' (re '.make_bitly_url($h).')';
 								$n=$f->query("//div[contains(@id, 'm')]//div[contains(@class, 'quote quote-big')]");
 								if(!empty($n) && $n->length>0) $n[0]->parentNode->removeChild($n[0]);
 							}
@@ -1320,6 +1321,7 @@ while(1){
 							}
 							$n = $f->query("//div[contains(@id, 'm')]//div[contains(@class, 'poll')]");
 							if(!empty($n) && $n->length>0) $t=trim($t).' (poll)';
+							$t.=$ql; // add quote link, no hint
 							// finalize and output
 							$t="[ $t ]";
 							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
