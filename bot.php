@@ -2275,6 +2275,7 @@ function get_true_random($min=1,$max=100,$num=1){
 	$num=((int)$num>=1)?(int)$num:1;
 	$r=curlget([CURLOPT_URL=>"http://www.random.org/integers/?num=$num&min=$min&max=$max&col=1&base=10&format=plain&rnd=new"]);
 	$r=trim(str_replace("\n",' ',$r));
+	$r=str_shorten($r);
 	return $r;
 }
 
