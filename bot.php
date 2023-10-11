@@ -1631,7 +1631,12 @@ while(1){
 							// else send("PRIVMSG $channel :Tor error or site down\n");
 							continue(2);
 						}
-					} else $html=curlget([CURLOPT_URL=>$u,CURLOPT_HTTPHEADER=>$header]);
+					} else {
+						if(!empty($curl_impersonate_enabled) && (!empty($curl_impersonate_all) || (!empty($curl_impersonate_domains && in_array(get_url_hint($u),$curl_impersonate_domains))))){
+							$html=shell_exec("$curl_impersonate_binary -s --connect-timeout 15 --retry 1 --max-time 15 -L --max-redirs 7 -b cookiefile.txt -c cookiefile.txt".(!empty($custom_curl_iface)?" --interface $curl_iface":"")." ".escapeshellarg($u));
+							$curl_error='';
+						} else 	$html=curlget([CURLOPT_URL=>$u,CURLOPT_HTTPHEADER=>$header]);
+					}
 					// echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 					if(empty($html)){
 						if(strpos($curl_error,'SSL certificate problem')!==false){

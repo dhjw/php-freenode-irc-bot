@@ -40,6 +40,22 @@ $tor_all=false; // get all urls through tor (not recommended due to anti-tor mea
 $tor_host='127.0.0.1';
 $tor_port=9050;
 
+$curl_impersonate_enabled=false; // https://github.com/lwthiker/curl-impersonate
+$curl_impersonate_binary='/usr/local/bin/curl_chrome110';
+$curl_impersonate_all=false;
+$curl_impersonate_domains=[ // do not include subdomain, multiple tlds are fine as we use public suffix list
+	'archive.today',
+	'archive.ph',
+	'archive.is',
+	'archive.li',
+	'archive.vn',
+	'archive.fo',
+	'archive.md',
+	'facebook.com',
+	'instagram.com',
+	'newsmax.com',
+];
+
 // replace in retrieved titles
 $title_replaces=[
 	$connect_ip=>'6.9.6.9', // for privacy (ip can still be determined by web logs)
