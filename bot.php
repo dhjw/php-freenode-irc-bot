@@ -92,7 +92,9 @@ if(!isset($help_url)){
 	}
 }
 
-// main loop
+// init
+if(function_exists('posix_getuid')) $run_dir='/run/user/'.posix_getuid(); else $run_dir='.';
+if(!file_exists($run_dir)) $run_dir='.';
 if(isset($connect_ip) && strpos($connect_ip,':')!==false) $connect_ip="[$connect_ip]"; // add brackets to ipv6
 if(isset($curl_iface) && strpos($curl_iface,':')!==false) $curl_iface="[$curl_iface]";
 if(($user=='your_username' || $pass=='your_password' || empty($user) || empty($pass)) && (empty($disable_sasl) || empty($disable_nickserv))){
@@ -130,8 +132,12 @@ if($title_cache_enabled){
 	init_title_cache();
 }
 $title_bold = !empty($title_bold) ? "\x02" : '';
-if(empty($twitter_nitter_instance)) $twitter_nitter_instance='https://nitter.net';
-
+if(!empty($twitter_nitter_enabled) && empty($twitter_nitter_instance)) $twitter_nitter_instance='https://nitter.privacydev.net';
+if(!empty($nitter_links_via_twitter)){
+	$nitter_hosts_time=0;
+	$nitter_hosts=[];
+	nitter_hosts_update();
+}
 while(1){
 	if($connect){
 		$in_channel=0;
@@ -973,6 +979,8 @@ while(1){
 					echo "Ignored URL $v\n";
 					continue(2);
 				}
+				// replace nitter hosts so they're processed as twitter
+				if(!empty($nitter_links_via_twitter) && !empty($nitter_hosts)) $u=preg_replace("#^https://(?:$nitter_hosts)#",'https://twitter.com',$u);
 				// title cache
 				if($title_cache_enabled){
 					$r=get_from_title_cache($u);
@@ -1762,6 +1770,8 @@ while(1){
 		}
 
 		if(empty($data) || ($ex[1]=='NOTICE' && strpos($data,':Server Terminating. Received SIGTERM')!==false) || (isme() && $ex[1]=='QUIT' && strpos($data,':Ping timeout')!==false)) break;
+
+		if(!empty($nitter_links_via_twitter) && ($time-$nitter_hosts_time)>=10800) nitter_hosts_update();
 	}
 	echo "Stream closed or timed out, reconnecting..\n";
 	$connect=1;
@@ -2336,10 +2346,8 @@ function register_loop_function($f){
 }
 
 function init_title_cache(){
-	global $title_cache_db;
-	if(function_exists('posix_getuid')) $p='/run/user/'.posix_getuid(); else $p='.';
-	if(!file_exists($p)) $p='.';
-	$title_cache_db=new SQLite3("$p/title_cache.db");
+	global $title_cache_db, $run_dir;
+	$title_cache_db=new SQLite3("$run_dir/title_cache.db");
 	$title_cache_db->busyTimeout(10000);
 	$r=$title_cache_db->querySingle("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='titles';");
 	if($r==0) $title_cache_db->query("CREATE TABLE titles (url text NOT NULL,title text NOT NULL); CREATE INDEX url on titles(url)");
@@ -2361,4 +2369,31 @@ function get_from_title_cache($u){
 	$r=$s->execute();
 	$r=$r->fetchArray(SQLITE3_NUM);
 	return $r?$r[0]:false;
+}
+
+function nitter_hosts_update(){
+	global $nitter_hosts, $nitter_hosts_time, $run_dir;
+	$time=time();
+	if(file_exists("$run_dir/nitter-hosts.dat")) list($ctime,$chosts)=explode('||',file_get_contents("$run_dir/nitter-hosts.dat")); else $ctime=0; // shared cache
+	if($time-$ctime>=43200){
+		file_put_contents("$run_dir/nitter-hosts.dat","$time||$nitter_hosts"); // pseudo-lock. note on boot should sleep a few secs after loading first bot to build file
+		echo "Updating list of nitter hosts (for link titles)... ";
+		$html=file_get_contents('https://github.com/zedeus/nitter/wiki/Instances');
+		if(!empty($html)){
+			preg_match_all('#<a href="https://(.*?)/?" rel="nofollow">.*?</a>(?: \(<a href=".*?" rel="nofollow">auth required</a>\))?</td>\n<td align="left">(?:✅|❌)</td>\n<td align="left">✅</td>#m',$html,$m);
+			$m[1][]='nitter.net';
+			echo "Success:\n".join(', ',$m[1])."\n";
+			$nitter_hosts=str_replace('\|','|',preg_quote(implode('|',$m[1]))); # for direct insertion into preg_replace
+			file_put_contents("$run_dir/nitter-hosts.dat","$time||$nitter_hosts");
+			$nitter_hosts_time=$time;
+		} else {
+			echo "Failed to get HTML. Will retry in 15 mins.\n";
+			file_put_contents("$run_dir/nitter-hosts.dat",($time-42300)."||$nitter_hosts");
+			$nitter_hosts_time+=900;
+		}
+	} else {
+		// echo "Updated nitter hosts from cache at $run_dir/nitter-hosts.dat\n";
+		$nitter_hosts=$chosts;
+		$nitter_hosts_time=$time;
+	}
 }

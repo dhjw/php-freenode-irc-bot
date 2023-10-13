@@ -33,7 +33,8 @@ $twitter_consumer_secret='';
 $twitter_access_token='';
 $twitter_access_token_secret='';
 $twitter_nitter_enabled=true; // overrides API
-$twitter_nitter_instance='https://nitter.net'; // could change to e.g. http://localhost:8080
+$twitter_nitter_instance='https://nitter.privacydev.net'; // could change to e.g. http://localhost:8080
+$nitter_links_via_twitter=true;
 
 $tor_enabled=false; // handle .onion urls
 $tor_all=false; // get all urls through tor (not recommended due to anti-tor measures)
