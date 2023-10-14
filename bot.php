@@ -1239,7 +1239,7 @@ while(1){
 					// twitter via Nitter
 					if(!empty($twitter_nitter_enabled)){
 						// tweet
-						if(preg_match('#^https?://(?:mobile\.)?twitter\.com/(?:\#!/)?(?:\w+)/status(?:es)?/(\d+)#',$u,$m)){
+						if(preg_match('#^https?://(?:mobile\.)?(?:twitter|x)\.com/(?:\#!/)?(?:\w+)/status(?:es)?/(\d+)#',$u,$m)){
 							echo "Getting tweet via Nitter\n";
 							$html=curlget([CURLOPT_URL=>"$twitter_nitter_instance/x/status/{$m[1]}"]);
 							if(empty($html)) continue(2);
@@ -1347,7 +1347,7 @@ while(1){
 					// twitter via API
 					if(!empty($twitter_consumer_key)){
 						// tweet
-						if(preg_match('#^https?://(?:mobile\.)?twitter\.com/(?:\#!/)?(?:\w+)/status(?:es)?/(\d+)#',$u,$m)){
+						if(preg_match('#^https?://(?:mobile\.)?(?:twitter|x)\.com/(?:\#!/)?(?:\w+)/status(?:es)?/(\d+)#',$u,$m)){
 							echo "getting tweet via API.. ";
 							if(!empty($m[1])){
 								$r=twitter_api('/statuses/show.json',['id'=>$m[1],'tweet_mode'=>'extended']);
@@ -1404,7 +1404,7 @@ while(1){
 								continue(2); // always abort, won't be a non-tweet URL
 							}
 						// bio
-						} elseif(preg_match("#^https?://(?:mobile\.)?twitter\.com/(\w*)(?:[\?\#].*)?$#",$u,$m)){
+						} elseif(preg_match("#^https?://(?:mobile\.)?(?:twitter|x)\.com/(\w*)(?:[\?\#].*)?$#",$u,$m)){
 							echo "getting twitter bio via API.. ";
 							if(!empty($m[1])){
 								$r=twitter_api('/users/show.json',['screen_name'=>$m[1]]);
