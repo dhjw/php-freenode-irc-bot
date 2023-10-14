@@ -1133,6 +1133,9 @@ while(1){
 						}
 					}
 
+					// get final url for reddit share urls
+					if(preg_match("#^https://reddit.com/r/[^/]*?/s/#", $u, $m)) $u=get_final_url($u);
+
 					// reddit image
 					if(strpos($u,'.redd.it/')!==false){
 						echo "getting reddit image title\n";
@@ -1150,7 +1153,7 @@ while(1){
 					}
 
 					// reddit comment
-					if(preg_match("#reddit.com/r/.*?/comments/.*?/.*?/(.+)[/]?#",$u,$m)){
+					if(preg_match("#reddit.com/r/.*?/comments/.*?/.*?/([^/?]+)#",$u,$m)){
 						if(strpos($m[1],'?')!==false) $m[1]=substr($m[1],0,strpos($m[1],'?')); // id
 						$m[1]=rtrim($m[1],'/');
 						echo "getting reddit comment. id={$m[1]}\n";
@@ -1178,7 +1181,7 @@ while(1){
 					}
 
 					// reddit title
-					if(preg_match("#reddit.com/r/.*?/comments/.+[/]?#",$u,$m)){
+					if(preg_match("#reddit.com/r/.*?/comments/[^/?]+#",$u,$m)){
 						echo "getting reddit post title\n";
 						if(strpos($u,'?')!==false) $u=substr($u,0,strpos($u,'?'));
 						for($i=2;$i>0;$i--){ // 2 tries
