@@ -1134,7 +1134,7 @@ while(1){
 					}
 
 					// get final url for reddit share urls
-					if(preg_match("#^https://reddit.com/r/[^/]*?/s/#", $u, $m)) $u=get_final_url($u);
+					if(preg_match("#^https://(?:www\.)?reddit.com/r/[^/]*?/s/#", $u, $m)) $u=get_final_url($u);
 
 					// reddit image
 					if(strpos($u,'.redd.it/')!==false){
