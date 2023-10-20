@@ -29,7 +29,7 @@ function geoip(){
 		send("PRIVMSG $target :Error retrieving location.\n");
 		return;
 	}
-	if(!empty($loc1) && !empty($loc2)) $tmp2=" (".make_bitly_url("https://www.google.com/maps?q=$loc1+$loc2").")"; else $tmp2='';
+	if(!empty($loc1) && !empty($loc2)) $tmp2=" (".make_short_url("https://www.google.com/maps?q=$loc1+$loc2").")"; else $tmp2='';
 	send("PRIVMSG $target :Location: ".implode(', ',$out).$tmp2."\n");
 
 }
