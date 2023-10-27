@@ -1876,7 +1876,9 @@ function curlget($opts = [])
 	if (!empty($opts[CURLOPT_HTTPHEADER])) $opts[CURLOPT_HTTPHEADER] = array_merge($default_header, $opts[CURLOPT_HTTPHEADER]);
 	curl_setopt_array($ch, $opts);
 	curl_exec($ch);
-	$curl_info = ['EFFECTIVE_URL' => curl_getinfo($ch, CURLINFO_EFFECTIVE_URL) // for loose-matching !wiki
+	$curl_info = [
+		'EFFECTIVE_URL' => curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+		'RESPONSE_CODE' => curl_getinfo($ch, CURLINFO_RESPONSE_CODE)
 	];
 	$curl_error = curl_error($ch);
 	if (!empty($curl_error)) echo "curl error: $curl_error\n";
