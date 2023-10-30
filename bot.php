@@ -1021,6 +1021,7 @@ while (1) {
 					echo "Ignored URL $v\n";
 					continue(2);
 				}
+				$parse_url = parse_url($u);
 				// replace nitter hosts so they're processed as twitter
 				if (!empty($nitter_links_via_twitter) && !empty($nitter_hosts)) $u = preg_replace("#^https://$nitter_hosts#", 'https://twitter.com', $u);
 				// title cache
@@ -1678,6 +1679,17 @@ while (1) {
 					if (preg_match("#^https?://poa\.st/@[^/]+/posts/#", $u) || preg_match("#^https?://poa\.st/notice/#", $u)) {
 						$og_desc = true;
 						$og_skip_blank = true;
+					}
+
+					// msn articles - title is via ajax
+					if (preg_match("#^(?:www\.)?msn.com/.*?/ar-([^/]*)$#", $parse_url['host'] . $parse_url['path'], $m)) {
+						$r = json_decode(curlget([CURLOPT_URL => "https://assets.msn.com/content/view/v2/Detail/en-us/$m[1]"]));
+						if (isset($r->title)) {
+							$t = str_shorten($r->title, 424);
+							$t = "[ $t ]";
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+							continue(2);
+						}
 					}
 
 					$og_title_urls_regex = ['#https?://(?:www\.)?brighteon\.com#', '#https?://(?:www\.)?campusreform\.org#',];
