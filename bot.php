@@ -816,10 +816,10 @@ while (1) {
 				echo "Translating.. ";
 				// check limit
 				$ym = date("Y-m");
-				if (!isset($botdata->translate_char_cnt)) $botdata->translate_char_cnt = [];
-				if (!isset($botdata->translate_char_cnt[$ym])) $botdata->translate_char_cnt[$ym] = 0;
-				echo "quota={$botdata->translate_char_cnt[$ym]}/$gcloud_translate_max_chars\n";
-				if ($botdata->translate_char_cnt[$ym] + strlen($args) > $gcloud_translate_max_chars) {
+				if (!isset($botdata->translate_char_cnt)) $botdata->translate_char_cnt = new stdClass();
+				if (!isset($botdata->translate_char_cnt->{$ym})) $botdata->translate_char_cnt->{$ym} = 0;
+				echo "quota=" . $botdata->translate_char_cnt->{$ym} . "/$gcloud_translate_max_chars\n";
+				if ($botdata->translate_char_cnt->{$ym} + strlen($args) > $gcloud_translate_max_chars) {
 					send("PRIVMSG $privto :Monthly translate limit exceeded\n");
 					continue;
 				}
@@ -848,7 +848,7 @@ while (1) {
 				} else {
 					send("PRIVMSG $privto :Could not translate.\n");
 				}
-				$botdata->translate_char_cnt[$ym] += strlen($args);
+				$botdata->translate_char_cnt->{$ym} += strlen($args);
 				file_put_contents($datafile, json_encode($botdata));
 				continue;
 			} elseif ($trigger == '!cc') {
