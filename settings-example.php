@@ -56,6 +56,9 @@ $curl_impersonate_domains = [ // do not include subdomain, multiple tlds are fin
 	'facebook.com',
 	'instagram.com',
 	'newsmax.com',
+	'investors.com',
+	'reuters.com',
+	'timesofisrael.com',
 ];
 
 // replace in retrieved titles
