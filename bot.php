@@ -1681,13 +1681,24 @@ while (1) {
 						$og_skip_blank = true;
 					}
 
-					// msn articles - title is via ajax
-					if (preg_match("#^(?:www\.)?msn.com/.*?/ar-([^/]*)$#", $parse_url['host'] . $parse_url['path'], $m)) {
+					// msn.com articles - title via ajax
+					if (preg_match("#^(?:www\.)?msn\.com/.*?/ar-([^/]*)$#", $parse_url['host'] . $parse_url['path'], $m)) {
 						$r = json_decode(curlget([CURLOPT_URL => "https://assets.msn.com/content/view/v2/Detail/en-us/$m[1]"]));
 						if (isset($r->title)) {
-							$t = str_shorten($r->title, 424);
-							$t = "[ $t ]";
+							$t = "[ " . str_shorten($r->title, 424) . " ]";
 							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+							if ($title_cache_enabled) add_to_title_cache($u, $t);
+							continue(2);
+						}
+					}
+
+					// militarywatchmagazine.com articles - title via ajax
+					if (preg_match("#^https?://(?:www\.)?militarywatchmagazine\.com/article/([^?\#]*)#", $u, $m)) {
+						$r = json_decode(curlget([CURLOPT_URL => "https://militarywatchmagazine.com/i_s/api/records/articles?filter=article_identifier,eq,$m[1]"]));
+						if (isset($r->records[0]->article_title)) {
+							$t = "[ " . str_shorten($r->records[0]->article_title, 424) . " ]";
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+							if ($title_cache_enabled) add_to_title_cache($u, $t);
 							continue(2);
 						}
 					}
