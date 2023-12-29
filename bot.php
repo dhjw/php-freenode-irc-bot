@@ -1131,7 +1131,7 @@ while (1) {
 
 					// wikipedia
 					// todo: extracts on subdomains other than en.wikipedia.org, auto-translate?
-					if (preg_match("#^(?:https?://(?:[^/]*?\.)?wiki[pm]edia\.org/wiki/(.*)|https?://upload\.wikimedia\.org)#", $u, $m)) {
+					if (preg_match("#^(?:https?://(?:[^/]*?\.)?wiki[pm]edia\.org/wiki/([^?\#]*)|https?://upload\.wikimedia\.org)#", $u, $m)) {
 						// handle file urls whether on upload.wikimedia.org thumb or full, direct or url hash
 						$f = '';
 						if (preg_match("#^https?://upload\.wikimedia\.org/wikipedia/.*/thumb/.*/(.*)/.*#", $u, $m2)) $f = $m2[1]; elseif (preg_match("#^https?://upload\.wikimedia\.org/wikipedia/commons/.*/(.*\.\w{3})#", $u, $m2)) $f = $m2[1];
@@ -1150,6 +1150,7 @@ while (1) {
 									$e = strip_tags($e);
 									$e = str_replace(["\r\n", "\n", "\t", "\xC2\xA0"], ' ', $e); // nbsp
 									$e = preg_replace('/\s+/', ' ', $e);
+									$e = html_entity_decode($e);
 									$e = trim($e);
 									$e = str_shorten($e, 280);
 								}
