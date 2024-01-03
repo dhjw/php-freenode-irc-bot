@@ -1871,7 +1871,7 @@ function curlget($opts = [])
 	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
 	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-	if ($custom_curl_iface) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
+	if ($custom_curl_iface && !in_array(parse_url($opts[CURLOPT_URL], PHP_URL_HOST), ['localhost', '127.0.0.1'])) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
 	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
 	curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookiefile.txt');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
