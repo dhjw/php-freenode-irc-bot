@@ -1131,7 +1131,7 @@ while (1) {
 
 					// wikipedia
 					// todo: extracts on subdomains other than en.wikipedia.org, auto-translate?
-					if (preg_match("#^(?:https?://(?:[^/]*?\.)?wiki[pm]edia\.org/wiki/([^?\#]*)|https?://upload\.wikimedia\.org)#", $u, $m)) {
+					if (preg_match("#^(?:https?://(?:[^/]*?\.)?wiki[pm]edia\.org/wiki/(.*)|https?://upload\.wikimedia\.org)#", $u, $m)) {
 						// handle file urls whether on upload.wikimedia.org thumb or full, direct or url hash
 						$f = '';
 						if (preg_match("#^https?://upload\.wikimedia\.org/wikipedia/.*/thumb/.*/(.*)/.*#", $u, $m2)) $f = $m2[1]; elseif (preg_match("#^https?://upload\.wikimedia\.org/wikipedia/commons/.*/(.*\.\w{3})#", $u, $m2)) $f = $m2[1];
@@ -2327,6 +2327,8 @@ function timedquiet($secs, $mask)
 function get_wiki_extract($q, $len = 280)
 {
 	$q = urldecode($q);
+	$pu = parse_url($q);
+	$q = $pu['path'] . ($pu['fragment'] ? '#' . $pu['fragment'] : ''); # strip query vars like ?useskin
 	$url = "https://en.wikipedia.org/w/api.php?action=query&titles=" . urlencode($q) . "&prop=extracts&format=json&redirects&formatversion=2&explaintext";
 	while (1) {
 		$tmp = curlget([CURLOPT_URL => $url]);
@@ -2340,15 +2342,13 @@ function get_wiki_extract($q, $len = 280)
 	$k = $tmp->query->pages[0];
 	unset($tmp);
 	$foundfrag = false;
-	$fragstr = "";
-	if (mb_strpos($q, '#') !== false) { // jump to fragment
-		$frag = trim(str_replace('_', ' ', mb_substr($q, mb_strpos($q, '#') + 1)));
+	if ($pu['fragment']) { // jump to fragment
+		$frag = trim(str_replace('_', ' ', $pu['fragment']));
 		$k->extract = str_replace(['======', '=====', '====', '==='], '==', $k->extract);
 		// try to find some sections with multiple ids, e.g. https://en.wikipedia.org/wiki/Microphone#Dynamic https://en.wikipedia.org/wiki/Microphone#Dynamic_microphone by removing additional words from fragment - useful for found hidden search-friendly ids with a shorter version in the table of contents e.g. !w dynamic microphone
 		$frags = explode(' ', $frag);
 		while (1) {
-			$fragstr = implode(' ', $frags);
-			$pos = mb_stripos($k->extract, "\n== $fragstr ==\n");
+			$pos = mb_stripos($k->extract, "\n== $frag ==\n");
 			if ($pos !== false) {
 				$k->extract = mb_substr($k->extract, $pos);
 				$foundfrag = true;
@@ -2364,7 +2364,7 @@ function get_wiki_extract($q, $len = 280)
 	$unset = false;
 	foreach ($arr as $k => $v) { // reformat section headers
 		if (substr($v, 0, 3) == '== ') {
-			if ($foundfrag && $v == "== $fragstr ==") $unset = $k; // remove current header
+			if ($foundfrag && $v == "== $frag ==") $unset = $k; // remove current header
 			else $arr[$k] = trim(str_replace('==', '', $v)) . ': ';
 		}
 	}
