@@ -1094,8 +1094,8 @@ while (1) {
 							}
 						}
 						if (!empty($yt)) {
-							if ($yt == 'v') $r = file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=$m[1]&part=snippet,contentDetails&maxResults=1&type=video&key=$youtube_api_key"); elseif ($yt == 'c' || $yt == 'u') $r = file_get_contents("https://www.googleapis.com/youtube/v3/channels?" . ($yt == 'c' ? 'id' : 'forUsername') . "=$m[1]&part=id,snippet&maxResults=1&key=$youtube_api_key");
-                            elseif ($yt == 'p') $r = file_get_contents("https://www.googleapis.com/youtube/v3/playlists?id=$m[1]&part=snippet&key=$youtube_api_key");
+							if ($yt == 'v') $r = file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=$m[1]&part=snippet,contentDetails,localizations&maxResults=1&type=video&key=$youtube_api_key"); elseif ($yt == 'c' || $yt == 'u') $r = file_get_contents("https://www.googleapis.com/youtube/v3/channels?" . ($yt == 'c' ? 'id' : 'forUsername') . "=$m[1]&part=id,snippet,localizations&maxResults=1&key=$youtube_api_key");
+                            elseif ($yt == 'p') $r = file_get_contents("https://www.googleapis.com/youtube/v3/playlists?id=$m[1]&part=snippet,localizations&key=$youtube_api_key");
 							$r = json_decode($r);
 							$s = false;
 							if (empty($r)) {
@@ -1117,11 +1117,12 @@ while (1) {
 									if (!empty($m[2]) && in_array($m[2], ['videos', 'playlists', 'community', 'channels', 'search'])) { // not home/featured or about
 										$x = ' - ' . ucfirst($m[2]);
 									} elseif (!empty($r->items[0]->snippet->description)) {
-										$d = str_replace(["\r\n", "\n", "\t", "\xC2\xA0"], ' ', $r->items[0]->snippet->description);
+										$d = isset($r->items[0]->localizations->en->description) ? $r->items[0]->localizations->en->description : $r->items[0]->snippet->description;
+										$d = str_replace(["\r\n", "\n", "\t", "\xC2\xA0"], ' ', $d);
 										$x = ' - ' . str_shorten(trim(preg_replace('/\s+/', ' ', $d)), 148);
 									}
 								}
-								$t = "[ {$r->items[0]->snippet->title}$x ]";
+								$t = "[ " . (isset($r->items[0]->localizations->en->title) ? $r->items[0]->localizations->en->title : $r->items[0]->snippet->title) . "$x ]";
 								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 								continue(2);
 							}
