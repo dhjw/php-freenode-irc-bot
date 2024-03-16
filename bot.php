@@ -1545,6 +1545,12 @@ while (1) {
 						}
 					}
 
+					# Facebook reels
+					if (preg_match('#^https?://(?:www\.)?facebook\.com/reel/(\d+)#', $u, $m)) {
+						$og_title = true;
+						$remove_fb_suffix = true;
+					} else $remove_fb_suffix = false;
+
 					// parler posts
 					if (preg_match('#^https?://(?:share\.par\.pw/post/|parler\.com/post-view\?q=)(\w*)#', $u, $m)) {
 						$html = curlget([CURLOPT_URL => "https://share.par.pw/post/$m[1]"]);
@@ -1750,6 +1756,7 @@ while (1) {
 						if (!empty($title_og || $og_title)) {
 							$list = $dom->getElementsByTagName("meta");
 							foreach ($list as $l) if (!empty($l->attributes->getNamedItem('property'))) if ($l->attributes->getNamedItem('property')->value == 'og:title' && !empty($l->attributes->getNamedItem('content')->value)) $title = $l->attributes->getNamedItem('content')->value;
+							if ($remove_fb_suffix) $title = preg_replace('/Facebook$/', '', $title);
 							if (empty($title) && $og_skip_blank) continue(2);
 						}
 						if ($og_desc) {
@@ -1779,7 +1786,7 @@ while (1) {
 					$title = preg_replace('/(&#[0-9]+;)/', '', $title);
 					$title = str_replace(["\r\n", "\n", "\t", "\xC2\xA0"], ' ', $title);
 					$title = trim(preg_replace('/\s+/', ' ', $title));
-					$notitletitles = [$parse_url["host"], 'imgur: the simple image sharer', 'Imgur', 'Imgur: The most awesome images on the Internet', 'Login • Instagram', 'Access denied .* used Cloudflare to restrict access', 'Amazon.* Something Went Wrong.*', 'Sorry! Something went wrong!', 'Bloomberg - Are you a robot?', 'Attention Required! | Cloudflare', 'Access denied', 'Access Denied', 'Please Wait... | Cloudflare', 'Log into Facebook', 'DDOS-GUARD', 'Just a moment...', 'Amazon.com', 'Amazon.ca', 'Blocked - 4plebs', 'MSN', 'Access to this page has been denied', 'You are being redirected...', 'Instagram', 'The Donald'];
+					$notitletitles = [$parse_url["host"], 'imgur: the simple image sharer', 'Imgur', 'Imgur: The most awesome images on the Internet', 'Login • Instagram', 'Access denied .* used Cloudflare to restrict access', 'Amazon.* Something Went Wrong.*', 'Sorry! Something went wrong!', 'Bloomberg - Are you a robot?', 'Attention Required! | Cloudflare', 'Access denied', 'Access Denied', 'Please Wait... | Cloudflare', 'Log into Facebook', 'DDOS-GUARD', 'Just a moment...', 'Amazon.com', 'Amazon.ca', 'Blocked - 4plebs', 'MSN', 'Access to this page has been denied', 'You are being redirected...', 'Instagram', 'The Donald', 'Facebook'];
 					foreach ($notitletitles as $ntt) {
 						if (preg_match('/^' . str_replace('\.\*', '.*', preg_quote($ntt)) . '$/', $title)) {
 							echo "Skipping output of title: $title\n";
