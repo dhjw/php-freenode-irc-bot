@@ -138,6 +138,8 @@ if (!empty($nitter_links_via_twitter)) {
 	$nitter_hosts = "";
 	nitter_hosts_update();
 }
+$short_url_token_index = 0;
+
 while (1) {
 	if ($connect) {
 		$in_channel = 0;
@@ -968,7 +970,7 @@ while (1) {
 				$d = str_shorten($d, 360);
 				$d = "\"$d\"";
 				if (strtolower($r->list[$num]->word) <> strtolower($q)) $d = "({$r->list[$num]->word}) $d";
-				$d .= ' ' . make_short_url($r->list[0]->permalink);
+				$d .= ' ' . make_short_url(get_final_url($r->list[0]->permalink), $r->list[0]->permalink);
 				send("PRIVMSG $privto :$d\n");
 			} elseif ($trigger == '!flip') {
 				$tmp = get_true_random(0, 1);
@@ -1359,7 +1361,7 @@ while (1) {
 									}
 									if (substr($m2[1], 0, 1) == '/') $m2[1] = "https://twitter.com$m2[1]";
 									// shorten displayed link if possible, add hint if needed
-									$fu = get_final_url($m2[1]);
+									$fu = get_final_url($m2[1], true);
 									$s = make_short_url($fu);
 									if (mb_strlen($s) < mb_strlen($m2[1])) $m2[1] = $s;
 									$h = get_url_hint($fu);
@@ -2068,37 +2070,68 @@ function timedout()
 	if ($meta['timed_out']) return true; else return false;
 }
 
-function make_short_url($url)
+function make_short_url($url, $fail_url = '')
 {
-	global $short_url_service, $short_url_token, $bitly_token;
-	if (!empty($bitly_token) && empty($short_url_service)) { # deprecated $bitly_token
-		$short_url_service = 'bit.ly';
-		$short_url_token = $bitly_token;
-	}
-	if ($short_url_service == 'bit.ly') {
-		$r = json_decode(curlget([CURLOPT_URL => 'https://api-ssl.bitly.com/v4/shorten', CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => json_encode(['long_url' => $url]), CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $short_url_token, 'Content-Type: application/json', 'Accept: application/json']]));
-		if (empty($r->id)) {
-			echo 'Bitly error. Response: ' . print_r($r, true);
-			return $url;
+	global $short_url_service, $short_url_token, $bitly_token, $short_url_token_index;
+	if (empty($fail_url)) $fail_url = $url;
+	$tries = 0;
+
+	while (true) {
+		if (!empty($short_url_token)) {
+			if (is_array($short_url_token)) {
+				if ($short_url_token_index == count($short_url_token)) $short_url_token_index = 0;
+				$use_token = $short_url_token[$short_url_token_index];
+				$short_url_token_index++;
+			} else $use_token = $short_url_token;
+		} elseif (!empty($bitly_token) && empty($short_url_service)) { # deprecated $bitly_token
+			$short_url_service = 'bit.ly';
+			$use_token = $bitly_token;
+			$short_url_token = '';
+		} else $use_token = '';
+
+		if ($short_url_service == 'tiny.cc') {
+			$body = new stdClass();
+			$body->urls = array();
+			$body2 = new stdClass();
+			$body2->long_url = $url;
+			$body->urls[0] = $body2;
+			$query = [];
+			$r = json_decode(curlget([CURLOPT_URL => 'https://tiny.cc/tiny/api/3/urls' . http_build_query($query), CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => json_encode($body), CURLOPT_HTTPHEADER => ['Authorization: Basic ' . base64_encode($use_token), 'Content-Type: application/json', 'Accept: application/json', 'Cache-Control: no-cache']]));
+			if (empty($r) || !isset($r->urls[0]->error->code) || $r->urls[0]->error->code <> 0 || !isset($r->urls[0]->short_url)) {
+				echo 'tiny.cc error. Response: ' . print_r($r, true);
+				if (is_array($short_url_token) && $tries <> count($short_url_token)) {
+					$tries++;
+					echo "retrying\n";
+				} else return $fail_url;
+			} else return 'https://' . $r->urls[0]->short_url;
+		} elseif ($short_url_service == 'tinyurl') {
+			$r = json_decode(curlget([CURLOPT_URL => 'https://api.tinyurl.com/create', CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => json_encode(['url' => $url]), CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $use_token, 'Content-Type: application/json', 'Accept: application/json']]));
+			if (empty($r) || !isset($r->code) || $r->code <> 0 || empty($r->data) || empty($r->data->tiny_url)) {
+				echo 'TinyURL error. Response: ' . print_r($r, true);
+				if (is_array($short_url_token) && $tries <> count($short_url_token)) {
+					$tries++;
+					echo "retrying\n";
+				} else return $fail_url;
+			} else return $r->data->tiny_url;
+		} elseif ($short_url_service == 'bit.ly') {
+			$r = json_decode(curlget([CURLOPT_URL => 'https://api-ssl.bitly.com/v4/shorten', CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => json_encode(['long_url' => $url]), CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $use_token, 'Content-Type: application/json', 'Accept: application/json']]));
+			if (empty($r->id)) {
+				echo 'Bitly error. Response: ' . print_r($r, true);
+				if (is_array($short_url_token) && $tries <> count($short_url_token)) {
+					$tries++;
+					echo "retrying\n";
+				} else return $fail_url;
+			} else return 'https://' . $r->id;
+		} elseif ($short_url_service == 'da.gd') {
+			$r = curlget([CURLOPT_URL => 'https://da.gd/s?url=' . rawurlencode($url), CURLOPT_HTTPHEADER => ['Accept: text/plain']]);
+			if (empty($r) || !preg_match('#^https://da\.gd#', $r)) {
+				echo 'da.gd error. Response: ' . print_r($r, true);
+				return $fail_url;
+			} else return $r;
+		} else {
+			echo "Warning: Can't make short URL. Configure \$short_url_service / \$short_url_token in the settings file.\n";
+			return $fail_url;
 		}
-		return 'https://' . $r->id;
-	} elseif ($short_url_service == 'tinyurl') {
-		$r = json_decode(curlget([CURLOPT_URL => 'https://api.tinyurl.com/create', CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => json_encode(['url' => $url]), CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $short_url_token, 'Content-Type: application/json', 'Accept: application/json']]));
-		if (empty($r) || !isset($r->code) || $r->code <> 0 || empty($r->data) || empty($r->data->tiny_url)) {
-			echo 'TinyURL error. Response: ' . print_r($r, true);
-			return $url;
-		}
-		return $r->data->tiny_url;
-	} elseif ($short_url_service == 'da.gd') {
-		$r = curlget([CURLOPT_URL => 'https://da.gd/s?url=' . rawurlencode($url), CURLOPT_HTTPHEADER => ['Accept: text/plain']]);
-		if (empty($r) || !preg_match('#^https://da\.gd#', $r)) {
-			echo 'da.gd error. Response: ' . print_r($r, true);
-			return $url;
-		}
-		return $r;
-	} else {
-		echo "Warning: Can't make short URL. Configure \$short_url_service / \$short_url_token in the settings file.\n";
-		return $url;
 	}
 }
 
@@ -2109,10 +2142,11 @@ function get_url_hint($u)
 	return get_base_domain(parse_url($u, PHP_URL_HOST));
 }
 
-function get_final_url($u)
+function get_final_url($u, $no_body = false)
 {
 	global $curl_info;
-	curlget([CURLOPT_URL => $u, CURLOPT_NOBODY => 1]);
+	if ($no_body) curlget([CURLOPT_URL => $u, CURLOPT_NOBODY => 1]);
+	else curlget([CURLOPT_URL => $u]); // nobody failed for e.g. http://help.urbanup.com/14769269
 	return !empty($curl_info['EFFECTIVE_URL']) ? $curl_info['EFFECTIVE_URL'] : $u;
 }
 
