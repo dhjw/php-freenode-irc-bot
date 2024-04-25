@@ -2572,16 +2572,21 @@ function nitter_hosts_update()
 	if ($time - $ctime >= 43200) {
 		file_put_contents("$run_dir/nitter-hosts.dat", "$time||$nitter_hosts"); // pseudo-lock. note on boot should sleep a few secs after loading first bot to build file
 		echo "Updating list of nitter hosts (for link titles)... ";
-		$html = file_get_contents('https://github.com/zedeus/nitter/wiki/Instances');
-		if (!empty($html)) {
-			preg_match_all('#<a href="https://(.*?)/?" rel="nofollow">.*?</a>(?: \(<a href=".*?" rel="nofollow">auth required</a>\))?</td>\n<td align="left">✅</td>\n<td align="left">✅</td>#m', $html, $m);
-			$m[1][] = 'nitter.net';
-			echo "Success:\n" . join(', ', $m[1]) . "\n";
-			$nitter_hosts = '(?:' . str_replace('\|', '|', preg_quote(implode('|', $m[1]))) . ')'; # for direct insertion into preg_replace
+		$html = file_get_contents('https://status.d420.de/api/v1/instances');
+		$json = @json_decode($html);
+		if (isset($json->hosts)) {
+			$hosts = ['nitter.net'];
+			foreach ($json->hosts as $host) {
+				if ($host->healthy || $host->points > 0 || $host->rss == 1 || array_sum($host->recent_pings) > 0 || $time - strtotime($host->last_healthy) <= 86400 * 30) {
+					$hosts[] = explode('://', $host->url)[1];
+				}
+			}
+			echo "Success:\n" . join(', ', $hosts) . "\n";
+			$nitter_hosts = '(?:' . str_replace('\|', '|', preg_quote(implode('|', $hosts))) . ')'; # for direct insertion into preg_replace
 			file_put_contents("$run_dir/nitter-hosts.dat", "$time||$nitter_hosts");
 			$nitter_hosts_time = $time;
 		} else {
-			echo "Failed to get HTML. Will retry in 15 mins.\n";
+			echo "Failed to get instance info. Will retry in 15 mins.\n";
 			file_put_contents("$run_dir/nitter-hosts.dat", ($time - 42300) . "||$nitter_hosts");
 			$nitter_hosts_time += 900;
 		}
