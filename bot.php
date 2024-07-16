@@ -1376,7 +1376,7 @@ while (1) {
 							// strip additional handles at beginning of deep replies
 							if (substr($b, 0, 1) == '@') {
 								$front = true;
-								$tmps = explode(' ', $t);
+								$tmps = explode(' ', $b);
 								foreach ($tmps as $k => $tmp) {
 									if ($k == 0) {
 										$tmp2 = $tmp;
