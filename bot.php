@@ -2127,7 +2127,7 @@ function make_short_url($url, $fail_url = '')
 			if (empty($r) || !preg_match('#^https://da\.gd#', $r)) {
 				echo 'da.gd error. Response: ' . print_r($r, true);
 				return $fail_url;
-			} else return $r;
+			} else return rtrim($r);
 		} else {
 			echo "Warning: Can't make short URL. Configure \$short_url_service / \$short_url_token in the settings file.\n";
 			return $fail_url;
