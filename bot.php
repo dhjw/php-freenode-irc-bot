@@ -139,6 +139,8 @@ if (!empty($nitter_links_via_twitter)) {
 	nitter_hosts_update();
 }
 $short_url_token_index = 0;
+$reddit_token = '';
+$reddit_token_expires = 0;
 
 while (1) {
 	if ($connect) {
@@ -1179,7 +1181,28 @@ while (1) {
 					}
 
 					// get final url for reddit share urls
-					if (preg_match("#^https://(?:www\.)?reddit.com/r/[^/]*?/s/#", $u, $m)) $u = get_final_url($u);
+					if (preg_match("#^https://(?:\w+\.)?reddit.com/r/[^/]*?/s/#", $u, $m)) $u = get_final_url($u);
+
+					// reddit auth
+					if (!empty($reddit_app_id) && (preg_match("#^https://(?:\w+\.)?reddit.com/#", $u) || preg_match("#^https://(?:\w+\.)?redd.it/#", $u))) {
+						if (empty($reddit_token) || $time >= $reddit_token_expires - 30) {
+							$j = json_decode(curlget([
+								CURLOPT_CUSTOMREQUEST => "POST",
+								CURLOPT_URL => "https://www.reddit.com/api/v1/access_token",
+								CURLOPT_USERPWD => "$reddit_app_id:$reddit_app_secret",
+								CURLOPT_POSTFIELDS => "grant_type=https://oauth.reddit.com/grants/installed_client&device_id=irc_link_previews_" . md5(gethostname())
+							]));
+							if (isset($j->access_token)) {
+								$reddit_token = $j->access_token;
+								$reddit_token_expires = $time + $j->expires_in;
+							} else {
+								$reddit_token = "";
+								echo "Error getting Reddit token: " . print_r($j, true) . "\n";
+							}
+						}
+						// update reddit url - appears safe to do universally and not just where we add authorization header
+						if ($reddit_token) $u = preg_replace('#^https://(?:\w+\.)?reddit.com#', 'https://oauth.reddit.com', $u);
+					}
 
 					// reddit image
 					if (strpos($u, '.redd.it/') !== false) {
@@ -1187,7 +1210,7 @@ while (1) {
 						$q = substr($u, strpos($u, '.redd.it') + 1);
 						if (strpos($q, '?') !== false) $q = substr($q, 0, strpos($q, '?'));
 						for ($i = 2; $i > 0; $i--) { // 2 tries
-							$j = json_decode(curlget([CURLOPT_URL => "https://www.reddit.com/search.json?q=site:redd.it+url:$q"]));
+							$j = json_decode(curlget([CURLOPT_URL => "https://" . ($reddit_token ? "oauth" : "www") . ".reddit.com/search.json?q=site:redd.it+url:$q", CURLOPT_HTTPHEADER => [$reddit_token ? "Authorization: Bearer $reddit_token" : ""]]));
 							if (isset($j->data->children[0])) {
 								$t = "[ {$j->data->children[0]->data->title} ]";
 								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
@@ -1198,13 +1221,13 @@ while (1) {
 					}
 
 					// reddit comment
-					if (preg_match("#reddit.com/r/.*?/comments/.*?/.*?/([^/?]+)#", $u, $m)) {
+					if (preg_match("#^https://(?:\w+\.)?reddit.com/r/.*?/comments/.*?/.*?/([^/?]+)#", $u, $m)) {
 						if (strpos($m[1], '?') !== false) $m[1] = substr($m[1], 0, strpos($m[1], '?')); // id
 						$m[1] = rtrim($m[1], '/');
 						echo "getting reddit comment. id=$m[1]\n";
 						if (strpos($u, '?') !== false) $u = substr($u, 0, strpos($u, '?'));
 						for ($i = 2; $i > 0; $i--) { // 2 tries
-							$j = json_decode(curlget([CURLOPT_URL => "$u.json", CURLOPT_HTTPHEADER => ["Cookie: _options=%7B%22pref_quarantine_optin%22%3A%20true%7D"]]));
+							$j = json_decode(curlget([CURLOPT_URL => "$u.json", CURLOPT_HTTPHEADER => ["Cookie: _options=%7B%22pref_quarantine_optin%22%3A%20true%7D", $reddit_token ? "Authorization: Bearer $reddit_token" : ""]]));
 							if (!empty($j)) {
 								if (!is_array($j) || !isset($j[1]->data->children[0]->data->id)) {
 									echo "unknown error. response=" . print_r($j, true);
@@ -1232,11 +1255,11 @@ while (1) {
 					}
 
 					// reddit title
-					if (preg_match("#reddit.com/r/.*?/comments/[^/?]+#", $u, $m)) {
+					if (preg_match("#^https://(?:\w+\.)?reddit.com/r/.*?/comments/[^/?]+#", $u, $m)) {
 						echo "getting reddit post title\n";
 						if (strpos($u, '?') !== false) $u = substr($u, 0, strpos($u, '?'));
 						for ($i = 2; $i > 0; $i--) { // 2 tries
-							$j = json_decode(curlget([CURLOPT_URL => "$u.json", CURLOPT_HTTPHEADER => ["Cookie: _options=%7B%22pref_quarantine_optin%22%3A%20true%7D"]]));
+							$j = json_decode(curlget([CURLOPT_URL => "$u.json", CURLOPT_HTTPHEADER => ["Cookie: _options=%7B%22pref_quarantine_optin%22%3A%20true%7D", $reddit_token ? "Authorization: Bearer $reddit_token" : ""]]));
 							if (!empty($j)) {
 								if (!is_array($j) || !isset($j[0]->data->children[0]->data->title)) {
 									echo "unknown error. response=" . print_r($j, true);
@@ -1256,12 +1279,7 @@ while (1) {
 					}
 
 					// reddit general - ignore quarantine
-					if (preg_match("#reddit.com/r/#", $u)) {
-						if (preg_match("#reddit.com/r/[^/]*$#", $u)) $u .= '/';
-						preg_match("#https?://.*?\.?reddit.com(/.*)#", $u, $m);
-						$u = "https://old.reddit.com$m[1]";
-						$header = ["Cookie: _options={%22pref_quarantine_optin%22:true}"];
-					}
+					if (preg_match("#^https://(?:\w+\.)?reddit.com/r/#", $u)) $header = ["Cookie: _options={%22pref_quarantine_optin%22:true}"];
 
 					// imdb
 					if (preg_match('#https?://(?:www.)?imdb.com/title/(tt\d*)/?(?:\?.*?)?$#', $u, $m)) {

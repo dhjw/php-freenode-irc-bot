@@ -36,6 +36,8 @@ $twitter_access_token_secret = '';
 $twitter_nitter_enabled = true; // overrides API
 $twitter_nitter_instance = 'https://nitter.privacydev.net'; // could change to e.g. http://localhost:8080
 $nitter_links_via_twitter = true;
+$reddit_app_id = ''; // create a "script" type app at https://www.reddit.com/prefs/apps
+$reddit_app_secret = '';
 
 $tor_enabled = false; // handle .onion urls
 $tor_all = false; // get all urls through tor (not recommended due to anti-tor measures)
