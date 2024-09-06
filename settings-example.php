@@ -38,6 +38,8 @@ $twitter_nitter_instance = 'https://nitter.privacydev.net'; // could change to e
 $nitter_links_via_twitter = true;
 $reddit_app_id = ''; // create a "script" type app at https://www.reddit.com/prefs/apps
 $reddit_app_secret = '';
+$spotify_client_id = ''; // create a "development mode" app at https://developer.spotify.com/dashboard
+$spotify_client_secret = '';
 
 $tor_enabled = false; // handle .onion urls
 $tor_all = false; // get all urls through tor (not recommended due to anti-tor measures)
