@@ -753,7 +753,7 @@ while (1) {
 				send("PRIVMSG $privto :https://youtu.be/$v | $title$ytextra\n");
 				continue;
 			} // OMDB, check for movie or series only (no episode or game)
-            elseif ($trigger == '!m') {
+			elseif ($trigger == '!m') {
 				echo "Searching OMDB.. ";
 				ini_set('default_socket_timeout', 30);
 				// by id only
@@ -1079,9 +1079,9 @@ while (1) {
 					if (!empty($youtube_api_key)) {
 						$yt = '';
 						if (preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/(?:watch.*[?&]v=|embed/|shorts/|live/)([a-zA-Z0-9-_]+)#', $u, $m) || preg_match('#^https?://(?:youtu\.be|invidio\.us)/([a-zA-Z0-9-_]+)/?(?:$|\?)#', $u, $m)) $yt = 'v';
-                        elseif (preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#', $u, $m)) $yt = 'c';
-                        elseif (preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]+)/?(\w*)#', $u, $m)) $yt = 'u';
-                        elseif (preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/playlist\?.*list=([a-zA-Z0-9-_]+)#', $u, $m)) $yt = 'p';
+						elseif (preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/channel/([a-zA-Z0-9-_]+)/?(\w*)#', $u, $m)) $yt = 'c';
+						elseif (preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/user/([a-zA-Z0-9-_]+)/?(\w*)#', $u, $m)) $yt = 'u';
+						elseif (preg_match('#^https?://(?:www\.|m\.|music\.)?(?:youtube\.com|invidio\.us)/playlist\?.*list=([a-zA-Z0-9-_]+)#', $u, $m)) $yt = 'p';
 						if (empty($yt)) { // custom channel URLs like /example or /c/example require scraping as no API endpoint
 							if (preg_match('#^https?://(?:www\.|m\.)?(?:youtube\.com|invidio\.us)/(?:c/)?([a-zA-Z0-9-_]+)/?(\w*)#', $u, $m)) {
 								$html = curlget([CURLOPT_URL => "https://www.youtube.com/$m[1]" . (!empty($m[2]) ? "/$m[2]" : '')]); // force load from youtube so indvidio.us works
@@ -1100,7 +1100,7 @@ while (1) {
 						}
 						if (!empty($yt)) {
 							if ($yt == 'v') $r = file_get_contents("https://www.googleapis.com/youtube/v3/videos?id=$m[1]&part=snippet,contentDetails,localizations&maxResults=1&type=video&key=$youtube_api_key"); elseif ($yt == 'c' || $yt == 'u') $r = file_get_contents("https://www.googleapis.com/youtube/v3/channels?" . ($yt == 'c' ? 'id' : 'forUsername') . "=$m[1]&part=id,snippet,localizations&maxResults=1&key=$youtube_api_key");
-                            elseif ($yt == 'p') $r = file_get_contents("https://www.googleapis.com/youtube/v3/playlists?id=$m[1]&part=snippet,localizations&key=$youtube_api_key");
+							elseif ($yt == 'p') $r = file_get_contents("https://www.googleapis.com/youtube/v3/playlists?id=$m[1]&part=snippet,localizations&key=$youtube_api_key");
 							$r = json_decode($r);
 							$s = false;
 							if (empty($r)) {
@@ -1141,8 +1141,8 @@ while (1) {
 						// handle file urls whether on upload.wikimedia.org thumb or full, direct or url hash
 						$f = '';
 						if (preg_match("#^https?://upload\.wikimedia\.org/wikipedia/.*/thumb/.*/(.*)/.*#", $u, $m2)) $f = $m2[1]; elseif (preg_match("#^https?://upload\.wikimedia\.org/wikipedia/commons/.*/(.*\.\w{3})#", $u, $m2)) $f = $m2[1];
-                        elseif (preg_match("#^https?://(?:[^/]*?\.)?wiki[pm]edia\.org/wiki/File:(.*)#", $u, $m2)) $f = $m2[1];
-                        elseif (preg_match("#^https?://(?:[^/]*?\.)?wikipedia\.org/wiki/[^\#]*\#/media/File:(.*)#", $u, $m2)) $f = $m2[1];
+						elseif (preg_match("#^https?://(?:[^/]*?\.)?wiki[pm]edia\.org/wiki/File:(.*)#", $u, $m2)) $f = $m2[1];
+						elseif (preg_match("#^https?://(?:[^/]*?\.)?wikipedia\.org/wiki/[^\#]*\#/media/File:(.*)#", $u, $m2)) $f = $m2[1];
 						if (!empty($f)) {
 							if (strpos($f, '%') !== false) $f = urldecode($f);
 							echo "wikipedia media file: $f\n";
@@ -1537,7 +1537,7 @@ while (1) {
 								$i = 0;
 								$v = 0;
 								if ($m->__typename == 'GraphImage') $i = 1; elseif ($m->__typename == 'GraphVideo') $v = 1;
-                                elseif ($m->__typename == 'GraphSidecar') {
+								elseif ($m->__typename == 'GraphSidecar') {
 									foreach ($m->edge_sidecar_to_children->edges as $a) {
 										if ($a->node->__typename == 'GraphImage') $i++; elseif ($a->node->__typename == 'GraphVideo') $v++;
 									}
@@ -2186,7 +2186,7 @@ function get_base_domain($d)
 				while (!feof($fp)) {
 					$l = fgets($fp, 1024);
 					if (substr($l, 0, 2) == '//' || $l == "\n") continue; elseif (substr($l, 0, 2) == '*.') $l = substr($l, 2);
-                    elseif (substr($l, 0, 1) == '!') $l = substr($l, 1);
+					elseif (substr($l, 0, 1) == '!') $l = substr($l, 1);
 					$f .= $l;
 				}
 				fclose($fp);
