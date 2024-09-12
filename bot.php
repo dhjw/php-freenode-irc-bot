@@ -1364,6 +1364,7 @@ while (1) {
 							echo "Getting tweet via Nitter\n";
 							$html = curlget([CURLOPT_URL => "$twitter_nitter_instance/x/status/$m[1]"]);
 							if (empty($html)) continue(2);
+							$html = str_replace('https://twitter.com', 'https://x.com', $html);
 							$dom = new DomDocument();
 							@$dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html);
 							$f = new DomXPath($dom);
