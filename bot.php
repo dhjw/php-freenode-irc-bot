@@ -1400,16 +1400,16 @@ while (1) {
 							$ql = '';
 							$n = $f->query("//div[contains(@id, 'm')]//a[contains(@class, 'quote-link')]");
 							if (!empty($n) && $n->length > 0) {
-								$h = $n[0]->getAttribute('href');
-								if (substr($h, 0, 1) == '/') $h = "https://twitter.com$h"; // may always be true
-								$h = preg_replace('/#m$/', '', $h);
-								$ql = ' (re ' . make_short_url($h) . ')';
+								$qh = $n[0]->getAttribute('href');
+								if (substr($qh, 0, 1) == '/') $qh = "https://x.com$qh"; // may always be true
+								$qh = preg_replace('/#m$/', '', $qh);
+								$ql = ' (re ' . make_short_url($qh) . ')';
 								$n = $f->query("//div[contains(@id, 'm')]//div[contains(@class, 'quote quote-big')]");
 								if (!empty($n) && $n->length > 0) $n[0]->parentNode->removeChild($n[0]);
 							}
 							// shorten and add hint for links, except ^@ and ^#
 							$hl = 0; // track hint lengths to increase max tweet length so never cut off
-							$b = preg_replace('#https?://nitter.net/#', 'https://twitter.com/', $b); // handling nitter.net is unreliable
+							$b = preg_replace('#https?://nitter.net/#', 'https://x.com/', $b); // handling nitter.net is unreliable
 							if (preg_match_all('#<a href=.*?>.*?</a>#', $b, $m) && !empty($m[0])) {
 								foreach ($m[0] as $v) {
 									preg_match('#<a href="([^"]*)".*>(.*)</a>#', $v, $m2); // m2[0] full anchor [1] href [2] text
@@ -1422,11 +1422,16 @@ while (1) {
 										if (preg_match('#' . preg_quote($m2[0]) . '$#', $b)) {
 											$b = preg_replace('#' . preg_quote($m2[0]) . '$#', '(space)', $b);
 											continue;
-										} else $m2[1] = preg_replace('#^https?://[^/]*/i/spaces/#', 'https://twitter.com/i/spaces/', $m2[1]);
+										} else $m2[1] = preg_replace('#^https?://[^/]*/i/spaces/#', 'https://x.com/i/spaces/', $m2[1]);
 									}
-									if (substr($m2[1], 0, 1) == '/') $m2[1] = "https://twitter.com$m2[1]";
+									if (substr($m2[1], 0, 1) == '/') $m2[1] = "https://x.com$m2[1]";
 									// shorten displayed link if possible, add hint if needed
 									$fu = get_final_url($m2[1], true);
+									// if link same as quote-link and at end of tweet, remove it
+									if ($fu == $qh) {
+										$b = rtrim(preg_replace("#$m2[0]$#", '', $b));
+										continue;
+									}
 									$s = make_short_url($fu);
 									if (mb_strlen($s) < mb_strlen($m2[1])) $m2[1] = $s;
 									$h = get_url_hint($fu);
@@ -1469,8 +1474,9 @@ while (1) {
 							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
 							if ($title_cache_enabled) add_to_title_cache($u, $t);
 							continue(2);
-							// todo:bio
-						} elseif (preg_match("#^https?://(?:mobile\.)?twitter\.com/(\w*)(?:[?\#].*)?$#", $u, $m)) {
+
+						} // bio
+						elseif (preg_match("#^https?://(?:mobile\.)?(?:twitter|x)\.com/(\w*)(?:[?\#].*)?$#", $u, $m)) {
 							continue(2);
 						}
 					}
