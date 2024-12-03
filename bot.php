@@ -2643,7 +2643,7 @@ function nitter_hosts_update()
 	if ($time - $ctime >= 43200) {
 		file_put_contents("$run_dir/nitter-hosts.dat", "$time||$nitter_hosts"); // pseudo-lock. note on boot should sleep a few secs after loading first bot to build file
 		echo "Updating list of nitter hosts (for link titles)... ";
-		$html = file_get_contents('https://status.d420.de/api/v1/instances');
+		$html = curlget([CURLOPT_URL => 'https://status.d420.de/api/v1/instances']);
 		$json = @json_decode($html);
 		if (isset($json->hosts)) {
 			$hosts = ['nitter.net'];
