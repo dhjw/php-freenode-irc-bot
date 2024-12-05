@@ -1578,6 +1578,22 @@ while (1) {
 						}
 					}
 
+					// tiktok
+					if (preg_match('#^https?://(?:www\.)?tiktok\.com/@[A-Za-z0-9._]+/video/\d+#', $u, $m)) {
+						$r = curlget([CURLOPT_URL => "https://www.tiktok.com/oembed?url=$m[0]"]);
+						$j = @json_decode($r);
+						if (isset($j->title) && isset($j->author_name)) {
+							$j->title = str_shorten(trim($j->title), 160);
+							$t = "{$j->author_name}: {$j->title}"; // author_name <= 30
+							$t = "[ $t ]";
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+							if ($title_cache_enabled) add_to_title_cache($u, $t);
+							continue(2);
+						} else {
+							echo "Error getting TikTok video URL details, got:\n" . trim($r) . "\n";
+						}
+					}
+
 					// instagram
 					if (preg_match('#https?://(?:www\.)?instagram\.com/p/([A-Za-z0-9-_]*)#', $u, $m)) {
 						echo "getting instagram post info\n";
