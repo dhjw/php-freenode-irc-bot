@@ -48,22 +48,6 @@ $tor_port = 9050;
 
 $curl_impersonate_enabled = false; // https://github.com/lwthiker/curl-impersonate
 $curl_impersonate_binary = '/usr/local/bin/curl_chrome110';
-$curl_impersonate_all = false;
-$curl_impersonate_domains = [ // do not include subdomain, multiple tlds are fine as we use public suffix list
-	'archive.today',
-	'archive.ph',
-	'archive.is',
-	'archive.li',
-	'archive.vn',
-	'archive.fo',
-	'archive.md',
-	'facebook.com',
-	'instagram.com',
-	'newsmax.com',
-	'investors.com',
-	'reuters.com',
-	'timesofisrael.com',
-];
 
 // replace in retrieved titles
 $title_replaces = [

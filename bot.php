@@ -1886,17 +1886,14 @@ while (1) {
 					if (!empty($tor_enabled) && (preg_match('#^https?://.*?\.onion(?:$|/)#', $u) || !empty($tor_all))) {
 						echo "getting url title via tor\n";
 						/** @noinspection HttpUrlsUsage */
-						$html = curlget([CURLOPT_URL => $u, CURLOPT_PROXYTYPE => 7, CURLOPT_PROXY => "http://$tor_host:$tor_port", CURLOPT_CONNECTTIMEOUT => 60, CURLOPT_TIMEOUT => 60, CURLOPT_HTTPHEADER => $header]);
+						$html = curlget([CURLOPT_URL => $u, CURLOPT_PROXYTYPE => CURLPROXY_SOCKS5_HOSTNAME, CURLOPT_PROXY => "$tor_host:$tor_port", CURLOPT_CONNECTTIMEOUT => 60, CURLOPT_TIMEOUT => 60, CURLOPT_HTTPHEADER => $header]);
 						if (empty($html)) {
 							if (strpos($curl_error, "Failed to connect to $tor_host port $tor_port") !== false) send("PRIVMSG $channel :Tor error - is it running?\n"); elseif (strpos($curl_error, "Connection timed out after") !== false) send("PRIVMSG $channel :Tor connection timed out\n");
 							// else send("PRIVMSG $channel :Tor error or site down\n");
 							continue(2);
 						}
 					} else {
-						if (!empty($curl_impersonate_enabled) && (!empty($curl_impersonate_all) || (!empty($curl_impersonate_domains && in_array(get_url_hint($u), $curl_impersonate_domains))))) {
-							$html = shell_exec("$curl_impersonate_binary -s --connect-timeout 15 --retry 1 --max-time 15 -L --max-redirs 7 -b cookiefile.txt -c cookiefile.txt" . (!empty($custom_curl_iface) ? " --interface $curl_iface" : "") . " " . escapeshellarg($u));
-							$curl_error = '';
-						} else    $html = curlget([CURLOPT_URL => $u, CURLOPT_HTTPHEADER => $header]);
+						$html = curlget([CURLOPT_URL => $u, CURLOPT_HTTPHEADER => $header]);
 					}
 					// echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 					if (empty($html)) {
@@ -2035,50 +2032,83 @@ while (1) {
 }
 // End Loop
 
-function curlget($opts = [])
+function curlget($opts = [], $more_opts = [])
 {
-	global $custom_curl_iface, $curl_iface, $user_agent, $allow_invalid_certs, $curl_response, $curl_info, $curl_error;
-	$curl_response = '';
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-	if ($custom_curl_iface && !in_array(parse_url($opts[CURLOPT_URL], PHP_URL_HOST), ['localhost', '127.0.0.1']) && !(isset($opts[CURLOPT_PROXY]) && in_array(parse_url($opts[CURLOPT_PROXY], PHP_URL_HOST), ['localhost', '127.0.0.1']))) curl_setopt($ch, CURLOPT_INTERFACE, $curl_iface);
-	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-	curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookiefile.txt');
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	// curl_setopt($ch,CURLOPT_VERBOSE,1);
-	// curl_setopt($ch,CURLOPT_HEADER,1);
-	curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
-	if (!empty($allow_invalid_certs)) curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_ENCODING, ''); // avoid gzipped result per http://stackoverflow.com/a/28295417
-	$default_header = [];
-	/*$default_header=[ // seem to help some servers
-		'Connection: keep-alive',
-		'Upgrade-Insecure-Requests: 1',
-		'Accept-Language: en'
-	];
-	curl_setopt($ch,CURLOPT_HTTPHEADER,$header);*/
-	// partially read big connections per https://stackoverflow.com/a/17641159
-	curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($handle, $data) {
-		global $curl_response;
-		$curl_response .= $data;
-		if (strlen($curl_response) > 1048576) { // up to 768KB required for amazon link titles
-			echo "aborting download at 1MB\n";
-			return 0;
-		} else return strlen($data);
-	});
-	if (!empty($opts[CURLOPT_HTTPHEADER])) $opts[CURLOPT_HTTPHEADER] = array_merge($default_header, $opts[CURLOPT_HTTPHEADER]);
-	curl_setopt_array($ch, $opts);
-	curl_exec($ch);
-	$curl_info = [
-		'EFFECTIVE_URL' => curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
-		'RESPONSE_CODE' => curl_getinfo($ch, CURLINFO_RESPONSE_CODE)
-	];
-	$curl_error = curl_error($ch);
+	global $custom_curl_iface, $curl_iface, $user_agent, $allow_invalid_certs, $curl_response, $curl_info, $curl_error, $curl_impersonate_enabled, $curl_impersonate_binary;
+
+	// determine interface
+	if ($custom_curl_iface && !in_array(parse_url($opts[CURLOPT_URL], PHP_URL_HOST), ['localhost', '127.0.0.1']) && !(isset($opts[CURLOPT_PROXY]) && in_array(parse_url($opts[CURLOPT_PROXY], PHP_URL_HOST), ['localhost', '127.0.0.1']))) $set_iface = $curl_iface;
+	else $set_iface = false;
+
+	if ($curl_impersonate_enabled && empty($more_opts['no_curl_impersonate'])) {
+		// commandline impersonate
+		$cmd = "$curl_impersonate_binary -Ls -w '%{stderr}%{json}' --retry 1 --max-redirs 7 -b cookiefile.txt -c cookiefile.txt --ipv4";
+		$cmd .= ' --connect-timeout ' . (!empty($opts[CURLOPT_CONNECTTIMEOUT]) ? $opts[CURLOPT_CONNECTTIMEOUT] : 15);
+		$cmd .= ' --max-time ' . (!empty($opts[CURLOPT_TIMEOUT]) ? $opts[CURLOPT_TIMEOUT] : 15);
+		if (!empty($set_iface)) $cmd .= " --interface $set_iface";
+		if (!empty($opts[CURLOPT_PROXY]) && !empty($opts[CURLOPT_PROXYTYPE])) $cmd .= ' --proxy ' . escapeshellarg(['http', 'http', 'https', '', 'socks4', 'socks5', 'socks4a', 'socks5h'][$opts[CURLOPT_PROXYTYPE]] . '://' . $opts[CURLOPT_PROXY]);
+		if (!empty($allow_invalid_certs)) $cmd .= " --insecure";
+		if (!empty($opts[CURLOPT_HTTPHEADER])) foreach ($opts[CURLOPT_HTTPHEADER] as $h) $cmd .= ' -H ' . escapeshellarg($h);
+		if (!empty($opts[CURLOPT_USERPWD])) $cmd .= ' -u ' . escapeshellarg($opts[CURLOPT_USERPWD]);
+		if (!empty($opts[CURLOPT_CUSTOMREQUEST])) $cmd .= " -X {$opts[CURLOPT_CUSTOMREQUEST]}";
+		elseif (!empty($opts[CURLOPT_POST])) $cmd .= " -X POST";
+		if (!empty($opts[CURLOPT_POSTFIELDS])) $cmd .= ' -d ' . escapeshellarg($opts[CURLOPT_POSTFIELDS]);
+		if (!empty($opts[CURLOPT_NOBODY])) $cmd .= ' -I';
+		$cmd .= ' ' . escapeshellarg($opts[CURLOPT_URL]);
+		// get stdout and stderr separately https://stackoverflow.com/a/25879953
+		$proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+		$curl_response = trim(stream_get_contents($pipes[1])); // stdout
+		fclose($pipes[1]);
+		$info = json_decode(stream_get_contents($pipes[2])); // stderr
+		fclose($pipes[2]);
+		proc_close($proc);
+		$curl_info = [
+			'EFFECTIVE_URL' => $info->url_effective,
+			'RESPONSE_CODE' => $info->http_code
+		];
+		$curl_error = $info->errormsg;
+	} else {
+		// PHP curl
+		$curl_response = '';
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+		if (!empty($set_iface)) curl_setopt($ch, CURLOPT_INTERFACE, $set_iface);
+		curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+		curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookiefile.txt');
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		// curl_setopt($ch,CURLOPT_VERBOSE,1);
+		// curl_setopt($ch,CURLOPT_HEADER,1);
+		curl_setopt($ch, CURLOPT_MAXREDIRS, 7);
+		if (!empty($allow_invalid_certs)) curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_ENCODING, ''); // avoid gzipped result per http://stackoverflow.com/a/28295417
+		// partially read big connections per https://stackoverflow.com/a/17641159
+		curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($handle, $data) {
+			global $curl_response;
+			$curl_response .= $data;
+			if (strlen($curl_response) > 1048576) { // up to 768KB required for amazon link titles
+				echo "aborting download at 1MB\n";
+				return 0;
+			} else return strlen($data);
+		});
+		curl_setopt_array($ch, $opts);
+		curl_exec($ch);
+		$curl_info = [
+			'EFFECTIVE_URL' => curl_getinfo($ch, CURLINFO_EFFECTIVE_URL),
+			'RESPONSE_CODE' => curl_getinfo($ch, CURLINFO_RESPONSE_CODE)
+		];
+		$curl_error = curl_error($ch);
+		curl_close($ch);
+	}
+
+	// both methods
+	if (parse_url($curl_info['EFFECTIVE_URL'], PHP_URL_HOST) == 'consent.youtube.com') {
+		parse_str(parse_url($curl_info['EFFECTIVE_URL'], PHP_URL_QUERY), $q);
+		if (isset($q['continue'])) $curl_info['EFFECTIVE_URL'] = $q['continue'];
+	}
 	if (!empty($curl_error)) echo "curl error: $curl_error\n";
-	curl_close($ch);
 	return $curl_response;
 }
 
@@ -2281,7 +2311,7 @@ function make_short_url($url, $fail_url = '')
 				} else return $fail_url;
 			} else return 'https://' . $r->id;
 		} elseif ($short_url_service == 'da.gd') {
-			$r = curlget([CURLOPT_URL => 'https://da.gd/s?url=' . rawurlencode($url), CURLOPT_HTTPHEADER => ['Accept: text/plain']]);
+			$r = curlget([CURLOPT_URL => 'https://da.gd/s?url=' . rawurlencode($url), CURLOPT_HTTPHEADER => ['Accept: text/plain']], ['no_curl_impersonate' => 1]);
 			if (empty($r) || !preg_match('#^https://da\.gd#', $r)) {
 				echo 'da.gd error. Response: ' . print_r($r, true);
 				return $fail_url;
