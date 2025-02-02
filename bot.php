@@ -1578,6 +1578,77 @@ while (1) {
 						}
 					}
 
+					// truth social
+					if (preg_match('#^https?://truthsocial\.com/.*?(?:statuses|@\w+|posts)/(\d+)#', $u, $m)) {
+						if ($curl_impersonate_enabled) { // has high CF protection
+							// post
+							echo "Getting Truth via API\n";
+							$r = curlget([CURLOPT_URL => "https://truthsocial.com/api/v1/statuses/$m[1]"]);
+							$r = @json_decode($r);
+							if (isset($r->id)) {
+								// clean up content
+								$b = $r->content;
+								$b = html_entity_decode($b, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+								$b = str_replace(["\r\n", "\n", "\t"], ' ', $b);
+								$b = str_replace('…', '...', $b);
+								$b = str_replace("‘", "'", str_replace("’", "'", $b));  # fancy quotes
+								$b = str_replace("“", '"', str_replace("”", '"', $b));
+								$b = preg_replace("/^<p>/", "", $b);
+								$b = preg_replace("#</p>$#", "", $b);
+								$b = str_replace("</p><p>", "\n\n", $b);
+								$b = str_replace("<br/>", "\n", $b);
+								$b = str_replace("<br />", "\n", $b);
+								$b = preg_replace('#<span class="quote-inline">.*?</span>(.*)#s', "$1", $b);
+								$b = str_replace("￼ ", " ", str_replace(" ￼", " ", str_replace("￼", "", $b)));  # weird invis char
+								$b = preg_replace("/ +/", " ", $b);
+								$b = str_replace("https://truthsocial.com/tags/", "#", $b);
+								$b = trim(preg_replace('/\s+/', ' ', $b));
+								// save quote link
+								$ql = !empty($r->quote) ? ' (re: ' . make_short_url($r->quote->url) . ')' : '';
+								// shorten and add hint for links
+								$hl = 0; // track hint lengths to increase max tweet length so never cut off
+								if (preg_match_all('#<a href=.*?>.*?</a>#', $b, $m) && !empty($m[0])) {
+									foreach ($m[0] as $v) {
+										preg_match('#<a href="([^"]*)".*>(.*)</a>#', $v, $m2); // m2[0] full anchor [1] href [2] text
+										// shorten displayed link if possible, add hint if needed
+										$fu = get_final_url($m2[1], true);
+										$s = make_short_url($fu);
+										if (mb_strlen($s) < mb_strlen($m2[1])) $m2[1] = $s;
+										$h = get_url_hint($fu);
+										if ($h <> get_url_hint($m2[1])) {
+											if (mb_strlen("$m2[1] ($h)") < mb_strlen($fu)) {
+												$b = str_replace($m2[0], "$m2[1] ($h)", $b);
+												$hl += mb_strlen($h) + 3;
+											} else $b = str_replace($m2[0], $fu, $b); // no hint, final url < short+hint
+										} else $b = str_replace($m2[0], $m2[1], $b); // no hint, same as displayed domain
+									}
+								}
+								// pre-finalize
+								$t = "{$r->account->display_name}: $b";
+								$t = str_shorten($t, mb_strlen($r->account->display_name) + 282 + $hl);
+								// count attachments
+								foreach (['image', 'gifv', 'tv', 'video'] as $m) {
+									$n = 0;
+									foreach ($r->media_attachments as $ma) if ($ma->type == $m) $n++;
+									if ($m == 'gifv') $m = 'gif';
+									if ($n > 0) $t = trim($t) . ($n == 1 ? " ($m)" : " ($n {$m}s)");
+								}
+								$t .= $ql; // add quote link, no hint
+								// finalize and output
+								$t = "[ $t ]";
+								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+								if ($title_cache_enabled) add_to_title_cache($u, $t);
+							} elseif (isset($r->error) and $r->error == 'Record not found') {
+								send("PRIVMSG $channel : Post does not exist.\n");
+							} else {
+								echo "Error getting Truth Social post. Result: " . print_r($r, true) . "\n";
+							}
+						} else {
+							echo "Truth Social links require $curl_impersonate_enabled\n";
+						}
+						continue(2);
+					}
+
 					// tiktok
 					if (preg_match('#^https?://(?:www\.)?tiktok\.com/@[A-Za-z0-9._]+/video/\d+#', $u, $m)) {
 						$r = curlget([CURLOPT_URL => "https://www.tiktok.com/oembed?url=$m[0]"]);
