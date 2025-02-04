@@ -2034,10 +2034,11 @@ while (1) {
 
 function curlget($opts = [], $more_opts = [])
 {
-	global $custom_curl_iface, $curl_iface, $user_agent, $allow_invalid_certs, $curl_response, $curl_info, $curl_error, $curl_impersonate_enabled, $curl_impersonate_binary;
+	global $custom_curl_iface, $curl_iface, $user_agent, $allow_invalid_certs, $curl_response, $curl_info, $curl_error, $curl_impersonate_enabled, $curl_impersonate_binary, $proxy_by_host_enabled, $proxy_by_host_iface, $proxy_by_hosts;
 
 	// determine interface
-	if ($custom_curl_iface && !in_array(parse_url($opts[CURLOPT_URL], PHP_URL_HOST), ['localhost', '127.0.0.1']) && !(isset($opts[CURLOPT_PROXY]) && in_array(parse_url($opts[CURLOPT_PROXY], PHP_URL_HOST), ['localhost', '127.0.0.1']))) $set_iface = $curl_iface;
+	if ($proxy_by_host_enabled && in_array(parse_url($opts[CURLOPT_URL], PHP_URL_HOST), $proxy_by_hosts)) $set_iface = $proxy_by_host_iface;
+	elseif ($custom_curl_iface && !in_array(parse_url($opts[CURLOPT_URL], PHP_URL_HOST), ['localhost', '127.0.0.1']) && !(isset($opts[CURLOPT_PROXY]) && in_array(parse_url($opts[CURLOPT_PROXY], PHP_URL_HOST), ['localhost', '127.0.0.1']))) $set_iface = $curl_iface;
 	else $set_iface = false;
 
 	if ($curl_impersonate_enabled && empty($more_opts['no_curl_impersonate'])) {

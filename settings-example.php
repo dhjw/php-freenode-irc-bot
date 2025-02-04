@@ -49,6 +49,13 @@ $tor_port = 9050;
 $curl_impersonate_enabled = false; // https://github.com/lwthiker/curl-impersonate
 $curl_impersonate_binary = '/usr/local/bin/curl_chrome110';
 
+$proxy_by_host_enabled = false; // for e.g. evading extreme cloudflare protection when it blocks even with impersonate but you don't want to proxy everything using $curl_iface
+$proxy_by_host_iface = 'tun0'; // can be interface e.g. tun0 or ip
+$proxy_by_hosts = [
+	'truthsocial.com',
+	'links.truthsocial.com',
+];
+
 // replace in retrieved titles
 $title_replaces = [
 	$connect_ip => '6.9.6.9', // for privacy (ip can still be determined by web logs)
