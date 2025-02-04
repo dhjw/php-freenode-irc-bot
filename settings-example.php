@@ -56,6 +56,18 @@ $proxy_by_hosts = [
 	'links.truthsocial.com',
 ];
 
+$scrapingbee_enabled = false; // https://rapidapi.com/daolf/api/scrapingbee
+$rapidapi_key = '';
+$scrapingbee_hosts = [ // set to 'all' or an array of hostnames. may not work for sites with custom handling
+	'archive.today',
+	'archive.ph',
+	'archive.is',
+	'archive.li',
+	'archive.vn',
+	'archive.fo',
+	'archive.md',
+];
+
 // replace in retrieved titles
 $title_replaces = [
 	$connect_ip => '6.9.6.9', // for privacy (ip can still be determined by web logs)

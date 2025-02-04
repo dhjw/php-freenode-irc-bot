@@ -1893,7 +1893,7 @@ while (1) {
 							continue(2);
 						}
 					} else {
-						$html = curlget([CURLOPT_URL => $u, CURLOPT_HTTPHEADER => $header]);
+						if (!empty($scrapingbee_enabled) && ($scrapingbee_hosts == 'all' || in_array($parse_url['host'], $scrapingbee_hosts))) $html = curlget([CURLOPT_URL => 'https://scrapingbee.p.rapidapi.com/?url=' . urlencode($u) . '&render_js=true', CURLOPT_HTTPHEADER => ['x-rapidapi-host: scrapingbee.p.rapidapi.com', 'x-rapidapi-key: ' . $rapidapi_key], CURLOPT_TIMEOUT => 31]); else $html = curlget([CURLOPT_URL => $u, CURLOPT_HTTPHEADER => $header]);
 					}
 					// echo "response[2048/".strlen($html)."]=".print_r(substr($html,0,2048),true)."\n";
 					if (empty($html)) {
