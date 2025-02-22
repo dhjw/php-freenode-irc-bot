@@ -2693,6 +2693,7 @@ function str_shorten($s, $len = 999, $opts = [])
 	if (!isset($opts['less'])) $opts['less'] = 0;
 	if (!isset($opts['nodots'])) $opts['nodots'] = false;
 	if (!isset($opts['nowordcut'])) $opts['nowordcut'] = false;
+	if (!isset($opts['keeppunc'])) $opts['keeppunc'] = false;
 	$e = false;
 	if (mb_strlen($s) > $len) { // desired max chars
 		$s = mb_substr($s, 0, $len);
@@ -2706,7 +2707,7 @@ function str_shorten($s, $len = 999, $opts = [])
 		if (!$opts['nowordcut']) $s = mb_substr($s, 0, mb_strrpos($s, ' ') + 1); // cut to last word
 		$e = true;
 	}
-	if ($e) $s = rtrim($s, ' ;.,') . (!$opts['nodots'] ? ' ...' : '');  // trim punc & add ellipses
+	if ($e) $s = ($opts['keeppunc'] ? rtrim($s, ' ') : rtrim($s, ' ;.,')) . (!$opts['nodots'] ? ' ...' : '');  // trim punc & add ellipses
 	return $s;
 }
 
