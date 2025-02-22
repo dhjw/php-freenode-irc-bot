@@ -2691,8 +2691,6 @@ function str_shorten($s, $len = 999, $opts = [])
 {
 	global $baselen;
 	if (!isset($opts['less'])) $opts['less'] = 0;
-	if (!isset($opts['nodots'])) $opts['nodots'] = false;
-	if (!isset($opts['nowordcut'])) $opts['nowordcut'] = false;
 	$e = false;
 	if (mb_strlen($s) > $len) { // desired max chars
 		$s = mb_substr($s, 0, $len);
@@ -2701,12 +2699,14 @@ function str_shorten($s, $len = 999, $opts = [])
 	}
 	$m = 502 - $baselen - $opts['less']; // max 512 - 4(ellipses) - 4(brackets) - 2(bold) - baselen bytes; todo: fix for non-full-width strings using 'less' for extra data, remove auto bracket calc and use 'less' on all calls
 	if ($opts['nodots']) $m += 4;
+	if ($opts['nobrackets']) $m += 4;
+	if ($opts['nobold']) $m += 2;
 	if (strlen($s) > $m) {
 		$s = mb_strcut($s, 0, $m); // mb-safe cut to bytes
 		if (!$opts['nowordcut']) $s = mb_substr($s, 0, mb_strrpos($s, ' ') + 1); // cut to last word
 		$e = true;
 	}
-	if ($e) $s = rtrim($s, ' ;.,') . (!$opts['nodots'] ? ' ...' : '');  // trim punc & add ellipses
+	if ($e) $s = ($opts['keeppunc'] ? rtrim($s, ' ') : rtrim($s, ' ;.,')) . (!$opts['nodots'] ? ' ...' : '');  // trim punc & add ellipses
 	return $s;
 }
 
