@@ -183,9 +183,9 @@ while (1) {
 					}
 				}
 			}
+			if (!empty($server_pass)) send("PASS $server_pass\n");
 			send("NICK $nick\n");
 			send("USER $ident $user $user :$ircname\n"); // first $user can be changed to modify ident and account login still works
-			if (!empty($pass)) send("PASS $pass\n");
 			if ($network == 'freenode' || $network == 'libera') {
 				send("CAP REQ account-notify\n");
 				send("CAP REQ extended-join\n");

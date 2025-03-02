@@ -4,6 +4,7 @@ $admins = ['dw1']; // array of account names (registered nicks on rizon)
 $network = 'libera'; // supported: libera, rizon, gamesurge, freenode
 // $host='irc.libera.chat:6667';
 $host = 'ssl://irc.libera.chat:7000'; // ssl
+$server_pass = '';
 $channel = '##examplechan';
 $nick = 'somebot'; // default nick
 $test_channel = '##exampletest'; // run script as "php bot.php <instance> test" for test mode
