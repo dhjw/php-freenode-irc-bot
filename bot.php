@@ -2058,7 +2058,7 @@ function curlget($opts = [], $more_opts = [])
 		$cmd .= ' ' . escapeshellarg($opts[CURLOPT_URL]);
 		// get stdout and stderr separately https://stackoverflow.com/a/25879953
 		$proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
-		$curl_response = trim(stream_get_contents($pipes[1])); // stdout
+		$curl_response = stream_get_contents($pipes[1]); // stdout
 		fclose($pipes[1]);
 		$info = json_decode(stream_get_contents($pipes[2])); // stderr
 		fclose($pipes[2]);
