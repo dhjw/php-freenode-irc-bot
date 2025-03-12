@@ -1644,7 +1644,7 @@ while (1) {
 								echo "Error getting Truth Social post. Result: " . print_r($r, true) . "\n";
 							}
 						} else {
-							echo "Truth Social links require $curl_impersonate_enabled\n";
+							echo "Truth Social links require \$curl_impersonate_enabled\n";
 						}
 						continue(2);
 					}
