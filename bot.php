@@ -1874,6 +1874,21 @@ while (1) {
 					$og_title_urls_regex = ['#https?://(?:www\.)?brighteon\.com#', '#https?://(?:www\.)?campusreform\.org#',];
 					foreach ($og_title_urls_regex as $r) if (preg_match($r, $u)) $og_title = true;
 
+					// ai image summaries
+					$ai_image_title_done = false;
+					if (!empty($ai_image_titles_enabled) && preg_match("#^https?://[^ ]+?\.(?:jpg|jpeg|png|webp|gif)$#i", $u)) {
+						echo "Using AI to summarize image link\n";
+						$t = get_ai_image_title($u);
+						if (!empty($t)) {
+							$t = str_shorten($t);
+							$t = "[ $t ]";
+							send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+							if ($title_cache_enabled) add_to_title_cache($u, $t);
+							continue(2);
+						}
+						$ai_image_title_done = true;
+					}
+
 					// skips
 					$pathinfo = pathinfo($u);
 					if (in_array($pathinfo['extension'], ['gif', 'gifv', 'mp4', 'webm', 'jpg', 'jpeg', 'png', 'csv', 'pdf', 'xls', 'doc', 'txt', 'xml', 'json', 'zip', 'gz', 'bz2', '7z', 'jar'])) {
@@ -1906,6 +1921,23 @@ while (1) {
 						echo "Error: response blank\n";
 						continue(2);
 					}
+					// check if it's an image for ai
+					if ($ai_image_titles_enabled && !$ai_image_title_done) {
+						$finfo = new finfo(FILEINFO_MIME);
+						$mime = explode(';', $finfo->buffer($html))[0];
+						if (preg_match("#image/(?:jpeg|png|webp|avif|gif)#", $mime)) {
+							echo "Using AI to summarize image link\n";
+							$t = get_ai_image_title($u, $html, $mime);
+							if (!empty($t)) {
+								$t = str_shorten($t);
+								$t = "[ $t ]";
+								send("PRIVMSG $channel :$title_bold$t$title_bold\n");
+								if ($title_cache_enabled) add_to_title_cache($u, $t);
+								continue(2);
+							}
+						}
+					}
+					// default
 					$title = '';
 					$html = str_replace('<<', '&lt;&lt;', $html); // rottentomatoes bad title html
 					$dom = new DOMDocument();
@@ -2784,4 +2816,88 @@ function nitter_hosts_update()
 		$nitter_hosts = $chosts;
 		$nitter_hosts_time = $time;
 	}
+}
+
+function get_ai_image_title($url, $image_data = null, $mime = null)
+{
+	global $ai_image_titles_key, $ai_image_titles_baseurl, $ai_image_titles_model, $ai_image_titles_prompt, $ai_image_titles_dl_hosts, $parse_url, $curl_error;
+	$orig_url = $url;
+
+	if (!preg_match("#^https?://i\.imgur\.com/#", $url) && (!preg_match("#^https?://[^ ]+?\.(?:jpg|jpeg|png)$#i", $url) || (!empty($ai_image_titles_dl_hosts) && ($ai_image_titles_dl_hosts == "all" || in_array($parse_url['host'], $ai_image_titles_dl_hosts))))) { // downloading imgur doesn't work, but ai can get them. skip urls with image extension
+		if (!$image_data) {
+			$image_data = curlget([CURLOPT_URL => $url]); // get image rather than pass url
+			if (empty($image_data)) {
+				if (!empty($curl_error) && strpos($curl_error, "Operation timed out") !== false) {
+					echo "get_ai_image_title ($orig_url): Timeout getting image\n";
+					return false;
+				}
+				echo "get_ai_image_title ($orig_url): Failed to get image, response blank\n";
+				return false;
+			}
+		}
+		if (!$mime) {
+			$finfo = new finfo(FILEINFO_MIME);
+			$mime = explode(';', $finfo->buffer($image_data))[0];
+		}
+		if (!preg_match("#image/(?:jpeg|png|webp|avif|gif)#", $mime)) {
+			echo "get_ai_image_title ($orig_url): Only jpg, png, webp, avif or gif links supported (got $mime)\n";
+			return false;
+		}
+		if (preg_match("#image/(?:webp|avif|gif)#", $mime)) { // convert to png and use data-uri
+			$im = imagecreatefromstring($image_data);
+			if (!$im) {
+				echo "get_ai_image_title ($orig_url): Error converting image. Corrupt image, missing php-gd or no $mime support?\n";
+				return false;
+			}
+			ob_start();
+			imagepng($im);
+			$image_data = ob_get_clean();
+			$mime = "image/png";
+		}
+		$url = "data:$mime;base64," . base64_encode($image_data);
+	}
+	$img_obj = new stdClass();
+	$img_obj->type = "image_url";
+	$i = new stdClass();
+	$i->url = $url;
+	$i->detail = "high";
+	$img_obj->image_url = $i;
+
+	// query
+	$data = new stdClass();
+	$data->messages = [];
+	$msg_obj = new stdClass();
+	$msg_obj->role = "user";
+	$c = new stdClass();
+	$c->type = "text";
+	$c->text = !empty($ai_image_titles_prompt) ? $ai_image_titles_prompt : "very short summary on one line. dont say \"this image\" or \"the image\". keep it short!";
+	$msg_obj->content[] = $c;
+	$msg_obj->content[] = $img_obj;
+	$data->messages[] = $msg_obj;
+	$data->model = $ai_image_titles_model;
+	$data->stream = false;
+	$data->temperature = 0;
+	$r = curlget([
+		CURLOPT_URL => $ai_image_titles_baseurl . "/chat/completions",
+		CURLOPT_HTTPHEADER => ["Content-Type: application/json", "Authorization: Bearer " . $ai_image_titles_key],
+		CURLOPT_CUSTOMREQUEST => "POST",
+		CURLOPT_POSTFIELDS => json_encode($data),
+		CURLOPT_CONNECTTIMEOUT => 25,
+		CURLOPT_TIMEOUT => 25
+	], ["no_curl_impersonate" => 1]); // image data uris too big for escapeshellarg with curl_impersonate
+	$r = @json_decode($r);
+	if (isset($r->error)) print_r($r);
+	if (empty($r)) {
+		if (!empty($curl_error) && strpos($curl_error, "Operation timed out") !== false) {
+			echo "get_ai_image_title ($orig_url): API error: timeout\n";
+			return false;
+		}
+		echo "get_ai_image_title ($orig_url): API error: no response\n";
+		return false;
+	}
+	if (!isset($r->choices[0]->message->content)) {
+		echo "get_ai_image_title ($orig_url): API error: no content\n";
+		return false;
+	}
+	return rtrim($r->choices[0]->message->content, '.');
 }

@@ -69,6 +69,16 @@ $scrapingbee_hosts = [ // set to 'all' or an array of hostnames. may not work fo
 	'archive.md',
 ];
 
+$ai_image_titles_enabled = false; // direct image link summaries/titles. does not override other apis
+$ai_image_titles_key = ''; // https://console.x.ai https://platform.openai.com
+$ai_image_titles_baseurl = 'https://api.x.ai/v1'; // https://api.openai.com/v1
+$ai_image_titles_model = 'grok-2-vision-latest'; // must be vision-capable https://docs.x.ai/docs/models https://platform.openai.com/docs/models
+$ai_image_titles_prompt = 'very short summary on one line. dont say "this image" or "the image". keep it short!';
+$ai_image_titles_dl_hosts = [ // set to 'all' or an array of hostnames. images will be downloaded and sent as a dataURI instead of a url (except i.imgur.com)
+	'i.4pcdn.org',
+	'static-assets-1.truthsocial.com',
+];
+
 // replace in retrieved titles
 $title_replaces = [
 	$connect_ip => '6.9.6.9', // for privacy (ip can still be determined by web logs)
