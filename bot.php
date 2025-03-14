@@ -1041,9 +1041,8 @@ while (1) {
 				}
 				$u_tries = 0;
 				$invidious_mirror = false;
-				$og_title = false;
-				$og_desc = false;
-				$og_skip_blank = false;
+				$use_meta_tag = false;
+				$meta_skip_blank - false;
 				while (1) { // extra loop for retries
 					echo "Checking URL: $u\n";
 					$html = '';
@@ -1705,11 +1704,9 @@ while (1) {
 						}
 					}
 
-					# Facebook reels
-					if (preg_match('#^https?://(?:www\.)?facebook\.com/reel/(\d+)#', $u, $m)) {
-						$og_title = true;
-						$remove_fb_suffix = true;
-					} else $remove_fb_suffix = false;
+					# Facebook
+					if (preg_match('#^https?://(?:www\.)?facebook\.com/reel/(\d+)#', $u, $m)) $use_meta_tag = 'description';
+					if (preg_match('#^https?://(?:www\.)?facebook\.com/photo/#', $u, $m)) $use_meta_tag = 'description';
 
 					// parler posts
 					if (preg_match('#^https?://(?:share\.par\.pw/post/|parler\.com/post-view\?q=)(\w*)#', $u, $m)) {
@@ -1834,19 +1831,19 @@ while (1) {
 					// gab social
 					if (preg_match('#https://(?:www\.)?gab\.com/[^/]+/posts/(\d+)#', $u)) {
 						$gab_post = true;
-						$og_desc = true;
+						$use_meta_tag = 'og:description';
 					} else $gab_post = false;
 
 					// telegram (todo: use api to get message details i.e. whether has a video or image)
 					if (preg_match("#^https?://t\.me/#", $u, $m)) {
-						$og_desc = true;
-						$og_skip_blank = true;
+						$use_meta_tag = 'og:description';
+						$meta_skip_blank = true;
 					}
 
 					// poa.st
 					if (preg_match("#^https?://poa\.st/@[^/]+/posts/#", $u) || preg_match("#^https?://poa\.st/notice/#", $u)) {
-						$og_desc = true;
-						$og_skip_blank = true;
+						$use_meta_tag = 'og:description';
+						$meta_skip_blank = true;
 					}
 
 					// msn.com articles - title via ajax
@@ -1872,7 +1869,7 @@ while (1) {
 					}
 
 					$og_title_urls_regex = ['#https?://(?:www\.)?brighteon\.com#', '#https?://(?:www\.)?campusreform\.org#',];
-					foreach ($og_title_urls_regex as $r) if (preg_match($r, $u)) $og_title = true;
+					foreach ($og_title_urls_regex as $r) if (preg_match($r, $u)) $use_meta_tag = 'og:title';
 
 					// ai image summaries
 					$ai_image_title_done = false;
@@ -1942,19 +1939,11 @@ while (1) {
 					$html = str_replace('<<', '&lt;&lt;', $html); // rottentomatoes bad title html
 					$dom = new DOMDocument();
 					if ($dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $html)) {
-						if (!empty($title_og || $og_title)) {
+						if ($use_meta_tag) {
 							$list = $dom->getElementsByTagName("meta");
-							foreach ($list as $l) if (!empty($l->attributes->getNamedItem('property'))) if ($l->attributes->getNamedItem('property')->value == 'og:title' && !empty($l->attributes->getNamedItem('content')->value)) $title = $l->attributes->getNamedItem('content')->value;
-							if ($remove_fb_suffix) $title = preg_replace('/Facebook$/', '', $title);
-							if (empty($title) && $og_skip_blank) continue(2);
-						}
-						if ($og_desc) {
-							$list = $dom->getElementsByTagName("meta");
-							foreach ($list as $l) if (!empty($l->attributes->getNamedItem('property'))) if ($l->attributes->getNamedItem('property')->value == 'og:description' && !empty($l->attributes->getNamedItem('content')->value)) $title = $l->attributes->getNamedItem('content')->value;
-							if (empty($title) && $og_skip_blank) continue(2);
-							if ($gab_post) {
-								$title = rtrim(preg_replace('/' . preg_quote(": '", '/') . '/', ': ', $title, 1), "'");
-							}
+							foreach ($list as $l) if (((!empty($l->attributes->getNamedItem('name')) && $l->attributes->getNamedItem('name')->value == $use_meta_tag) || (!empty($l->attributes->getNamedItem('property')) && $l->attributes->getNamedItem('property')->value == $use_meta_tag)) && !empty($l->attributes->getNamedItem('content')->value)) $title = $l->attributes->getNamedItem('content')->value;
+							if ($gab_post) $title = rtrim(preg_replace('/' . preg_quote(": '", '/') . '/', ': ', $title, 1), "'");
+							if (empty($title) && $meta_skip_blank) continue(2);
 						}
 						if (empty($title)) {
 							$list = $dom->getElementsByTagName("title");
